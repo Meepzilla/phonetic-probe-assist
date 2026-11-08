@@ -31,16 +31,16 @@ interface DetailedResult {
 
 
 export function ChDeepProbeResults({ session }: ChDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
     const [selectedSection, setSelectedSection] = useState<DetailedResult | null>(null);
 
     const { mainResults, detailedResults, totalCorrect, grandTotal } = useMemo(() => {
         const CH_TARGETS = ['tʃ', 'dʒ'];
         const mainResults: Record<string, ResultSummary> = {
-            'Initial /tʃ/': { correct: 0, total: 12 },
-            'Medial /tʃ/': { correct: 0, total: 8 },
-            'Final /tʃ/': { correct: 0, total: 8 },
-            'Initial, Medial, Final /dʒ/': { correct: 0, total: 6 },
+            'Initial /tʃ/': { correct: 0, total: 0 },
+            'Medial /tʃ/': { correct: 0, total: 0 },
+            'Final /tʃ/': { correct: 0, total: 0 },
+            'Initial, Medial, Final /dʒ/': { correct: 0, total: 0 },
         };
 
         const detailedResults: DetailedResult[] = CH_DEEP_PROBE_SECTIONS.map(section => {
@@ -52,15 +52,19 @@ export function ChDeepProbeResults({ session }: ChDeepProbeResultsProps) {
                     CH_TARGETS.some(target => result.phonemes[index].phoneme.includes(target))
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isCorrect);
+                return targetProductions.every(p => p.isScored && p.isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             if (section.subCategory.startsWith('I.')) mainResults['Initial /tʃ/'].correct += correctCount;
+            if (section.subCategory.startsWith('I.')) mainResults['Initial /tʃ/'].total += totalInSection;
             else if (section.subCategory.startsWith('II.')) mainResults['Medial /tʃ/'].correct += correctCount;
+            else if (section.subCategory.startsWith('II.')) mainResults['Medial /tʃ/'].total += totalInSection;
             else if (section.subCategory.startsWith('III.')) mainResults['Final /tʃ/'].correct += correctCount;
+            else if (section.subCategory.startsWith('III.')) mainResults['Final /tʃ/'].total += totalInSection;
             else if (section.subCategory.startsWith('IV.')) mainResults['Initial, Medial, Final /dʒ/'].correct += correctCount;
+            else if (section.subCategory.startsWith('IV.')) mainResults['Initial, Medial, Final /dʒ/'].total += totalInSection;
             
             return {
                 category: section.category,
@@ -169,9 +173,9 @@ export function ChDeepProbeResults({ session }: ChDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 CH_TARGETS.some(target => wordResult.phonemes[i]?.phoneme.includes(target))
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => !p.isCorrect && CH_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
+                                .filter(p => p.isScored && !p.isCorrect && CH_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -205,6 +209,8 @@ export function ChDeepProbeResults({ session }: ChDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

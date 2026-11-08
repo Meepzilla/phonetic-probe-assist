@@ -105,7 +105,7 @@ export function SessionSetup({ onSessionStart }: SessionSetupProps) {
                             sessionResults.push({
                                 word,
                                 phonemes,
-                                productions: phonemes.map(unit => ({ isCorrect: true, ipa: unit.phoneme })),
+                                productions: phonemes.map(unit => ({ isCorrect: true, isScored: false, ipa: unit.phoneme })),
                                 category: section.category,
                                 subCategory: section.subCategory,
                             });
@@ -120,7 +120,7 @@ export function SessionSetup({ onSessionStart }: SessionSetupProps) {
                 return {
                     word,
                     phonemes,
-                    productions: phonemes.map(unit => ({ isCorrect: true, ipa: unit.phoneme })),
+                    productions: phonemes.map(unit => ({ isCorrect: true, isScored: false, ipa: unit.phoneme })),
                 };
             });
         } else { // general
@@ -138,7 +138,7 @@ export function SessionSetup({ onSessionStart }: SessionSetupProps) {
                 return {
                     word,
                     phonemes,
-                    productions: phonemes.map(unit => ({ isCorrect: true, ipa: unit.phoneme })),
+                    productions: phonemes.map(unit => ({ isCorrect: true, isScored: false, ipa: unit.phoneme })),
                 };
             });
         }

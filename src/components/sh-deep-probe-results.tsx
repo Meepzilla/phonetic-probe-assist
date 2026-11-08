@@ -31,16 +31,16 @@ interface DetailedResult {
 
 
 export function ShDeepProbeResults({ session }: ShDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
     const [selectedSection, setSelectedSection] = useState<DetailedResult | null>(null);
     
     const { mainResults, detailedResults, totalCorrect, grandTotal } = useMemo(() => {
         const SH_TARGETS = ['ʃ', 'ʒ'];
         const mainResults: Record<string, ResultSummary> = {
-            'Initial /ʃ/': { correct: 0, total: 12 },
-            'Medial /ʃ/': { correct: 0, total: 8 },
-            'Final /ʃ/': { correct: 0, total: 8 },
-            'Medial/Final /ʒ/': { correct: 0, total: 5 },
+            'Initial /ʃ/': { correct: 0, total: 0 },
+            'Medial /ʃ/': { correct: 0, total: 0 },
+            'Final /ʃ/': { correct: 0, total: 0 },
+            'Medial/Final /ʒ/': { correct: 0, total: 0 },
         };
 
         const detailedResults: DetailedResult[] = SH_DEEP_PROBE_SECTIONS.map(section => {
@@ -52,15 +52,19 @@ export function ShDeepProbeResults({ session }: ShDeepProbeResultsProps) {
                     SH_TARGETS.some(target => result.phonemes[index].phoneme.includes(target))
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isCorrect);
+                return targetProductions.every(p => p.isScored && p.isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             if (section.subCategory.startsWith('I.')) mainResults['Initial /ʃ/'].correct += correctCount;
+            if (section.subCategory.startsWith('I.')) mainResults['Initial /ʃ/'].total += totalInSection;
             else if (section.subCategory.startsWith('II.')) mainResults['Medial /ʃ/'].correct += correctCount;
+            else if (section.subCategory.startsWith('II.')) mainResults['Medial /ʃ/'].total += totalInSection;
             else if (section.subCategory.startsWith('III.')) mainResults['Final /ʃ/'].correct += correctCount;
+            else if (section.subCategory.startsWith('III.')) mainResults['Final /ʃ/'].total += totalInSection;
             else if (section.subCategory.startsWith('IV.')) mainResults['Medial/Final /ʒ/'].correct += correctCount;
+            else if (section.subCategory.startsWith('IV.')) mainResults['Medial/Final /ʒ/'].total += totalInSection;
             
             return {
                 category: section.category,
@@ -168,9 +172,9 @@ export function ShDeepProbeResults({ session }: ShDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 SH_TARGETS.some(target => wordResult.phonemes[i]?.phoneme.includes(target))
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => !p.isCorrect && SH_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
+                                .filter(p => p.isScored && !p.isCorrect && SH_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -204,6 +208,8 @@ export function ShDeepProbeResults({ session }: ShDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

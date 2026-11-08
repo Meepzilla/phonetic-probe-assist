@@ -23,7 +23,7 @@ interface SectionResult {
 }
 
 export function PDeepProbeResults({ session }: PDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
 
     const { detailedResults, totalCorrect, grandTotal } = useMemo(() => {
         const results: SectionResult[] = P_DEEP_PROBE_SECTIONS.map(section => {
@@ -39,10 +39,10 @@ export function PDeepProbeResults({ session }: PDeepProbeResultsProps) {
                 if (targetIndices.length === 0) return false;
 
                 // Check if all productions of the target phoneme are correct
-                return targetIndices.every(index => result.productions[index].isCorrect);
+                return targetIndices.every(index => result.productions[index].isScored && result.productions[index].isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             return {
                 category: section.category,
@@ -110,6 +110,8 @@ export function PDeepProbeResults({ session }: PDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

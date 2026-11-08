@@ -124,7 +124,10 @@ export function ProbeAdministration({
 
   const handleSaveAndNavigate = (direction: 'next' | 'prev') => {
     // Ensure the latest state of currentResult is saved before navigating
-    const newResult: ProbeWordResult = { ...currentResult };
+    const newResult: ProbeWordResult = {
+      ...currentResult,
+      productions: currentResult.productions.map(prod => ({ ...prod, isScored: true })),
+    };
     if (newResult.skipped) {
         delete newResult.skipped;
     }
@@ -145,7 +148,7 @@ export function ProbeAdministration({
     const newResult = {
       ...currentResult,
       skipped: true,
-      productions: currentResult.phonemes.map(unit => ({ isCorrect: false, ipa: unit.phoneme, errorType: 'omission' })),
+      productions: currentResult.phonemes.map(unit => ({ isCorrect: false, isScored: true, ipa: unit.phoneme, errorType: 'omission' })),
     };
     updateResult(currentWordIndex, newResult);
 
@@ -157,7 +160,10 @@ export function ProbeAdministration({
   };
 
   const handleFinish = () => {
-    const newResult: ProbeWordResult = { ...currentResult };
+    const newResult: ProbeWordResult = {
+      ...currentResult,
+      productions: currentResult.productions.map(prod => ({ ...prod, isScored: true })),
+    };
     if (newResult.skipped) {
         delete newResult.skipped;
     }

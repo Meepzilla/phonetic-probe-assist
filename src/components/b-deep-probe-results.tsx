@@ -23,7 +23,7 @@ interface SectionResult {
 }
 
 export function BDeepProbeResults({ session }: BDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
 
     const { detailedResults, totalCorrect, grandTotal } = useMemo(() => {
         const results: SectionResult[] = B_DEEP_PROBE_SECTIONS.map(section => {
@@ -37,10 +37,10 @@ export function BDeepProbeResults({ session }: BDeepProbeResultsProps) {
 
                 if (targetIndices.length === 0) return false;
 
-                return targetIndices.every(index => result.productions[index].isCorrect);
+                return targetIndices.every(index => result.productions[index].isScored && result.productions[index].isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             return {
                 category: section.category,
@@ -108,6 +108,8 @@ export function BDeepProbeResults({ session }: BDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

@@ -28,14 +28,24 @@ export function usePhonemeCoverage(session: ProbeSession | null) {
         return session.probeType === 'spanish-general' ? ALL_SPANISH_PHONEMES : ALL_PHONEMES;
     }, [session]);
 
-    const { coverage, errors, phoneticInventory, correctWords } = useMemo(() => {
-        if (!session) return { coverage: {}, errors: [], phoneticInventory: [], correctWords: {} };
+    const { coverage, errors, phoneticInventory, correctWords, attemptedWords, scoredUnits } = useMemo(() => {
+        if (!session) return { coverage: {}, errors: [], phoneticInventory: [], correctWords: {}, attemptedWords: 0, scoredUnits: 0 };
 
         const coverage: CoverageData = phonemeSet.reduce((acc, p) => ({ ...acc, [p]: { initial: 0, medial: 0, final: 0 } }), {});
         const errors: ErrorRecord[] = [];
         const correctWords: Record<string, Record<string, ProbeWordResult[]>> = {};
+        let attemptedWords = 0;
+        let scoredUnits = 0;
 
         session.results.forEach(result => {
+            const wordScored = result.productions.some(prod => prod.isScored);
+            if (!wordScored) return;
+
+            if (!result.skipped) {
+                attemptedWords++;
+                scoredUnits += result.productions.filter(prod => prod.isScored).length;
+            }
+
             if (result.skipped) {
                 // If word is skipped, count all its phonemes as omissions
                 result.phonemes.forEach(unit => {
@@ -54,7 +64,7 @@ export function usePhonemeCoverage(session: ProbeSession | null) {
 
             result.phonemes.forEach((unit, index) => {
                 const prod = result.productions[index];
-                if (!prod) return; // Guard against missing production data
+                if (!prod || !prod.isScored) return; // Guard against missing or unscored production data
                 const position = unit.position;
                 const targetPhoneme = unit.phoneme;
 
@@ -87,7 +97,7 @@ export function usePhonemeCoverage(session: ProbeSession | null) {
             return positions.initial >= 2 || positions.medial >= 2 || positions.final >= 2;
         });
 
-        return { coverage, errors, phoneticInventory, correctWords };
+        return { coverage, errors, phoneticInventory, correctWords, attemptedWords, scoredUnits };
     }, [session, phonemeSet]);
     
     const [selectedWordDetails, setSelectedWordDetails] = useState<ProbeWordResult | null>(null);
@@ -95,5 +105,5 @@ export function usePhonemeCoverage(session: ProbeSession | null) {
         setSelectedWordDetails(wordResult);
     }
 
-    return { coverage, errors, phoneticInventory, phonemeSet, correctWords, selectedWordDetails, setSelectedWordDetails, onWordClick };
+    return { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits, selectedWordDetails, setSelectedWordDetails, onWordClick };
 }

@@ -25,7 +25,7 @@ interface SectionResult {
 }
 
 export function TDeepProbeResults({ session }: TDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
     const [selectedSection, setSelectedSection] = useState<SectionResult | null>(null);
 
     const { detailedResults, totalCorrect, grandTotal } = useMemo(() => {
@@ -37,10 +37,10 @@ export function TDeepProbeResults({ session }: TDeepProbeResultsProps) {
                     result.phonemes[index].phoneme.includes('t')
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isCorrect);
+                return targetProductions.every(p => p.isScored && p.isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             return {
                 category: section.category,
@@ -118,9 +118,9 @@ export function TDeepProbeResults({ session }: TDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 wordResult.phonemes[i]?.phoneme.includes('t')
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => !p.isCorrect && p.phoneme.phoneme.includes('t'));
+                                .filter(p => p.isScored && !p.isCorrect && p.phoneme.phoneme.includes('t'));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -154,6 +154,8 @@ export function TDeepProbeResults({ session }: TDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

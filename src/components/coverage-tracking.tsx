@@ -78,7 +78,7 @@ export function CoverageTracking({ session }: CoverageTrackingProps) {
     }
 
     // This part is for 'general' and 'spanish-general' probes
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
 
     return (
         <div className="space-y-8">
@@ -89,6 +89,8 @@ export function CoverageTracking({ session }: CoverageTrackingProps) {
                 phoneticInventory={phoneticInventory} 
                 phonemeSet={phonemeSet} 
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

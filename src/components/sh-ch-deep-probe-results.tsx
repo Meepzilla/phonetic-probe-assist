@@ -49,10 +49,10 @@ export function ShChDeepProbeResults({ session }: ShChDeepProbeResultsProps) {
                     targets.some(target => result.phonemes[index].phoneme.includes(target))
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isCorrect);
+                return targetProductions.every(p => p.isScored && p.isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             return {
                 mainCategory: section.category as 'SH' | 'CH',
@@ -68,47 +68,55 @@ export function ShChDeepProbeResults({ session }: ShChDeepProbeResultsProps) {
         const chDetailedResults = results.filter(r => r.mainCategory === 'CH');
 
         const shSummary: Record<string, Summary> = {
-            'Initial /ʃ/': { correct: 0, total: 12, words: [] },
-            'Medial /ʃ/': { correct: 0, total: 8, words: [] },
-            'Final /ʃ/': { correct: 0, total: 8, words: [] },
-            'Medial/Final /ʒ/': { correct: 0, total: 5, words: [] },
+            'Initial /ʃ/': { correct: 0, total: 0, words: [] },
+            'Medial /ʃ/': { correct: 0, total: 0, words: [] },
+            'Final /ʃ/': { correct: 0, total: 0, words: [] },
+            'Medial/Final /ʒ/': { correct: 0, total: 0, words: [] },
         };
         
         shDetailedResults.forEach(res => {
             if (res.subCategory.startsWith('I.')) {
                 shSummary['Initial /ʃ/'].correct += res.correct;
+                shSummary['Initial /ʃ/'].total += res.total;
                 shSummary['Initial /ʃ/'].words.push(...res.words);
             } else if (res.subCategory.startsWith('II.')) {
                 shSummary['Medial /ʃ/'].correct += res.correct;
+                shSummary['Medial /ʃ/'].total += res.total;
                 shSummary['Medial /ʃ/'].words.push(...res.words);
             } else if (res.subCategory.startsWith('III.')) {
                 shSummary['Final /ʃ/'].correct += res.correct;
+                shSummary['Final /ʃ/'].total += res.total;
                 shSummary['Final /ʃ/'].words.push(...res.words);
             } else if (res.subCategory.startsWith('IV.')) {
                 shSummary['Medial/Final /ʒ/'].correct += res.correct;
+                shSummary['Medial/Final /ʒ/'].total += res.total;
                 shSummary['Medial/Final /ʒ/'].words.push(...res.words);
             }
         });
 
         const chSummary: Record<string, Summary> = {
-            'Initial /tʃ/': { correct: 0, total: 12, words: [] },
-            'Medial /tʃ/': { correct: 0, total: 8, words: [] },
-            'Final /tʃ/': { correct: 0, total: 8, words: [] },
-            'Initial, Medial, Final /dʒ/': { correct: 0, total: 6, words: [] },
+            'Initial /tʃ/': { correct: 0, total: 0, words: [] },
+            'Medial /tʃ/': { correct: 0, total: 0, words: [] },
+            'Final /tʃ/': { correct: 0, total: 0, words: [] },
+            'Initial, Medial, Final /dʒ/': { correct: 0, total: 0, words: [] },
         };
 
         chDetailedResults.forEach(res => {
             if (res.subCategory.startsWith('I.')) {
                 chSummary['Initial /tʃ/'].correct += res.correct;
+                chSummary['Initial /tʃ/'].total += res.total;
                 chSummary['Initial /tʃ/'].words.push(...res.words);
             } else if (res.subCategory.startsWith('II.')) {
                 chSummary['Medial /tʃ/'].correct += res.correct;
+                chSummary['Medial /tʃ/'].total += res.total;
                 chSummary['Medial /tʃ/'].words.push(...res.words);
             } else if (res.subCategory.startsWith('III.')) {
                 chSummary['Final /tʃ/'].correct += res.correct;
+                chSummary['Final /tʃ/'].total += res.total;
                 chSummary['Final /tʃ/'].words.push(...res.words);
             } else if (res.subCategory.startsWith('IV.')) {
                 chSummary['Initial, Medial, Final /dʒ/'].correct += res.correct;
+                chSummary['Initial, Medial, Final /dʒ/'].total += res.total;
                 chSummary['Initial, Medial, Final /dʒ/'].words.push(...res.words);
             }
         });
@@ -136,7 +144,7 @@ export function ShChDeepProbeResults({ session }: ShChDeepProbeResultsProps) {
         return Math.round((correct / total) * 100);
     }
 
-    const { coverage, errors, phoneticInventory, phonemeSet } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
 
     const getWordResultsForSection = (section: SectionResult | null): ProbeWordResult[] => {
         if (!section) return [];
@@ -271,6 +279,8 @@ export function ShChDeepProbeResults({ session }: ShChDeepProbeResultsProps) {
                 errors={errors}
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );
