@@ -9,16 +9,24 @@ import type { ProbeSession } from '@/lib/types';
 import {
     analyzePhonologicalProcesses,
     formatAgeReference,
+    isPastTypicalElimination,
     PHONOLOGICAL_PROCESS_AGE_REFERENCE,
     PHONOLOGICAL_PROCESS_DEFINITIONS,
     type PhonologicalProcessResult,
 } from '@/lib/phonological-processes';
+import { formatAgeMonths, resolveStudentAgeMonths } from '@/lib/student-age';
 
 interface PhonologicalProcessesProps {
     session: ProbeSession;
 }
 
-function ProcessRow({ process }: { process: PhonologicalProcessResult }) {
+function ProcessRow({
+    process,
+    pastTypicalElimination,
+}: {
+    process: PhonologicalProcessResult;
+    pastTypicalElimination: boolean;
+}) {
     const [expanded, setExpanded] = useState(false);
     const panelId = `phonological-process-examples-${process.id}`;
 
@@ -26,7 +34,12 @@ function ProcessRow({ process }: { process: PhonologicalProcessResult }) {
         <div className="border rounded-lg p-3 space-y-2">
             <div className="flex items-center justify-between gap-3">
                 <p className="font-medium">{process.label}</p>
-                {process.present && <Badge>Present</Badge>}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                    {pastTypicalElimination && (
+                        <Badge variant="secondary">Past typical elimination age</Badge>
+                    )}
+                    {process.present && <Badge>Present</Badge>}
+                </div>
             </div>
             <p className="text-sm text-muted-foreground">
                 {process.occurrences} of {process.opportunities} opportunities · {process.percent}%
@@ -116,6 +129,7 @@ function AgeReferenceSection() {
 
 export function PhonologicalProcesses({ session }: PhonologicalProcessesProps) {
     const analysis = useMemo(() => analyzePhonologicalProcesses(session), [session]);
+    const studentAgeMonths = useMemo(() => resolveStudentAgeMonths(session), [session]);
 
     // Present processes first by percent descending, then the rest by
     // occurrences descending; ties fall back to percent, then label, so the
@@ -139,6 +153,11 @@ export function PhonologicalProcesses({ session }: PhonologicalProcessesProps) {
                     marked Present when it occurs at least twice and in at least 40% of its
                     opportunities.
                 </CardDescription>
+                {studentAgeMonths !== null && (
+                    <p className="text-sm font-medium">
+                        Student age {formatAgeMonths(studentAgeMonths)}
+                    </p>
+                )}
             </CardHeader>
             <CardContent className="space-y-3">
                 {analysis.countedProductions === 0 ? (
@@ -156,7 +175,17 @@ export function PhonologicalProcesses({ session }: PhonologicalProcessesProps) {
                             {analysis.countedWords} words.
                         </p>
                         {sortedProcesses.map((process) => (
-                            <ProcessRow key={process.id} process={process} />
+                            <ProcessRow
+                                key={process.id}
+                                process={process}
+                                pastTypicalElimination={
+                                    studentAgeMonths !== null &&
+                                    isPastTypicalElimination(
+                                        PHONOLOGICAL_PROCESS_AGE_REFERENCE[process.id],
+                                        studentAgeMonths
+                                    )
+                                }
+                            />
                         ))}
                         <p className="text-xs text-muted-foreground">
                             Assimilation is approximate: only place assimilation toward another

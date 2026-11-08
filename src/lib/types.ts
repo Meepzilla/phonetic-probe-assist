@@ -62,6 +62,14 @@ export interface ProbeSession {
   sessionId: string;
   clientId: string;
   date: string;
+  /**
+   * Optional student birthdate as an ISO date string (yyyy-mm-dd).
+   * When set, it takes precedence over studentAgeMonths wherever the
+   * student's age is resolved (see student-age.ts).
+   */
+  studentBirthdate?: string;
+  /** Optional student age in completed months, entered directly as years;months. */
+  studentAgeMonths?: number;
   wordList: string[];
   results: ProbeWordResult[];
   probeType?: ProbeType;
