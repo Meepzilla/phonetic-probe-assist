@@ -187,10 +187,21 @@ interface Accumulator {
  * Computes the phonological processes detectable in a session.
  *
  * Opportunities are counted contexts, per process:
- * - Final / initial consonant deletion: counted consonant productions in
- *   that position.
+ * - Final / initial consonant deletion: counted singleton consonant
+ *   productions in that position, plus one per cluster run in that
+ *   position holding at least one counted production. A run is in
+ *   initial position when it includes the word's first unit and in
+ *   final position when it includes the word's last unit.
  * - Cluster reduction: counted productions on members of a consonant
  *   cluster (a run of two or more consecutive consonant units in a word).
+ *
+ * One omission feeds exactly one deletion-family process. An omitted
+ * cluster member whose run partially surfaces is cluster reduction
+ * only, never also a position deletion. A cluster omitted in full
+ * counts once as a position deletion for the run's position, not once
+ * per member. Singleton omissions count under their own position, and
+ * medial omissions feed nothing, as there is no medial deletion
+ * process.
  * - Stopping: counted fricative and affricate productions. Deaffrication:
  *   counted affricate productions.
  * - Fronting: counted velar productions. Backing: counted alveolar
@@ -248,9 +259,11 @@ export function analyzePhonologicalProcesses(session: ProbeSession): Phonologica
     // Cluster runs: maximal runs of two or more consecutive consonant
     // units, recorded as sets of unit indices.
     const clusterRunByIndex = new Map<number, number[]>();
+    const clusterRuns: number[][] = [];
     let run: number[] = [];
     const closeRun = () => {
       if (run.length >= 2) {
+        clusterRuns.push(run);
         for (const idx of run) clusterRunByIndex.set(idx, run);
       }
       run = [];
@@ -263,6 +276,54 @@ export function analyzePhonologicalProcesses(session: ProbeSession): Phonologica
       }
     }
     closeRun();
+
+    // Deletion-family precedence for cluster runs, resolved once per run
+    // so one omission cannot feed two processes:
+    // - The run adds one deletion opportunity for its position when it
+    //   holds at least one counted production. A run's position is
+    //   initial when it includes the word's first unit and final when it
+    //   includes the word's last unit; medial runs add none.
+    // - A member omitted while at least one other counted member
+    //   surfaces (is not itself omitted) feeds cluster reduction; those
+    //   member indices are collected here and credited in the entry loop.
+    // - A run omitted in full feeds the position deletion rule for the
+    //   run's position exactly once, credited here from the first
+    //   omitted member.
+    const clusterReductionIndices = new Set<number>();
+    for (const indices of clusterRuns) {
+      const countedMembers: typeof entries = [];
+      for (const idx of indices) {
+        const member = entries[idx];
+        if (member && member.counted) countedMembers.push(member);
+      }
+      if (countedMembers.length === 0) continue;
+      const runPosition = indices.includes(0)
+        ? 'initial'
+        : indices.includes(entries.length - 1)
+          ? 'final'
+          : null;
+      if (runPosition === 'initial') addOpportunity('initial-consonant-deletion');
+      if (runPosition === 'final') addOpportunity('final-consonant-deletion');
+      const omittedMembers = countedMembers.filter((m) => m.production?.errorType === 'omission');
+      if (omittedMembers.length === 0) continue;
+      const anyMemberSurfaces = countedMembers.some((m) => m.production?.errorType !== 'omission');
+      if (anyMemberSurfaces) {
+        for (const m of omittedMembers) clusterReductionIndices.add(m.index);
+      } else if (runPosition) {
+        const firstOmitted = omittedMembers[0];
+        if (firstOmitted) {
+          addOccurrence(
+            runPosition === 'initial' ? 'initial-consonant-deletion' : 'final-consonant-deletion',
+            {
+              word: result.word,
+              target: firstOmitted.unit.phoneme,
+              produced: 'ø',
+              position: firstOmitted.unit.position,
+            }
+          );
+        }
+      }
+    }
 
     const countedConsonants = countedEntries.filter((entry) => entry.unit.type === 'consonant');
     const assimilationApplies = countedConsonants.length >= 2;
@@ -279,9 +340,13 @@ export function analyzePhonologicalProcesses(session: ProbeSession): Phonologica
       };
 
       // Opportunities driven by position and target class alone.
+      // Deletion opportunities count singleton productions here; cluster
+      // runs contribute one per run in the run pass above.
       if (unit.type === 'consonant') {
-        if (unit.position === 'final') addOpportunity('final-consonant-deletion');
-        if (unit.position === 'initial') addOpportunity('initial-consonant-deletion');
+        if (!clusterRunByIndex.has(entry.index)) {
+          if (unit.position === 'final') addOpportunity('final-consonant-deletion');
+          if (unit.position === 'initial') addOpportunity('initial-consonant-deletion');
+        }
         if (clusterRunByIndex.has(entry.index)) addOpportunity('cluster-reduction');
         if (assimilationApplies) addOpportunity('assimilation');
       }
@@ -311,20 +376,17 @@ export function analyzePhonologicalProcesses(session: ProbeSession): Phonologica
       // the IPA field of an omitted production still holds the target.
       if (production.errorType === 'omission' && unit.type === 'consonant') {
         const omissionExample = { ...example, produced: 'ø' };
-        if (unit.position === 'final') addOccurrence('final-consonant-deletion', omissionExample);
-        if (unit.position === 'initial') addOccurrence('initial-consonant-deletion', omissionExample);
-        const clusterRun = clusterRunByIndex.get(entry.index);
-        if (clusterRun) {
-          // Cluster reduction: this member was dropped while at least one
-          // other member of the cluster surfaces (counted and not itself
-          // omitted). A cluster deleted in full is consonant deletion,
-          // already counted above.
-          const otherMemberSurfaces = clusterRun.some((otherIndex) => {
-            if (otherIndex === entry.index) return false;
-            const other = entries[otherIndex];
-            return !!other && other.counted && other.production?.errorType !== 'omission';
-          });
-          if (otherMemberSurfaces) addOccurrence('cluster-reduction', omissionExample);
+        if (clusterRunByIndex.has(entry.index)) {
+          // Cluster member: cluster reduction only, and only when the
+          // run partially surfaces (resolved in the run pass above). A
+          // run omitted in full was credited there, once, as a position
+          // deletion, so it adds nothing here.
+          if (clusterReductionIndices.has(entry.index)) {
+            addOccurrence('cluster-reduction', omissionExample);
+          }
+        } else {
+          if (unit.position === 'final') addOccurrence('final-consonant-deletion', omissionExample);
+          if (unit.position === 'initial') addOccurrence('initial-consonant-deletion', omissionExample);
         }
         continue;
       }
