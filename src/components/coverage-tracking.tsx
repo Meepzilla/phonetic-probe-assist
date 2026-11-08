@@ -4,6 +4,7 @@ import type { ProbeSession } from '@/lib/types';
 import { usePhonemeCoverage } from '@/hooks/use-phoneme-coverage';
 import { SharedCoverageDetails } from './shared-coverage-details';
 import { PCC } from './pcc';
+import { PhonologicalProcesses } from './phonological-processes';
 
 import { SDeepProbeResults } from './s-deep-probe-results';
 import { ThDeepProbeResults } from './th-deep-probe-results';
@@ -29,52 +30,132 @@ interface CoverageTrackingProps {
 
 export function CoverageTracking({ session }: CoverageTrackingProps) {
     if (session.probeType === 'pip') {
-        return <PipResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <PipResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-s') {
-        return <SDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <SDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-th') {
-        return <ThDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <ThDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-r') {
-        return <RDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <RDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-l') {
-        return <LDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <LDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-k') {
-        return <KDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <KDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-g') {
-        return <GDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <GDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-sh') {
-        return <ShDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <ShDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-ch') {
-        return <ChDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <ChDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-f') {
-        return <FDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <FDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-t') {
-        return <TDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <TDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-d') {
-        return <DDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <DDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-m') {
-        return <MDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <MDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
      if (session.probeType === 'deep-n') {
-        return <NDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <NDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-b') {
-        return <BDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <BDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
     if (session.probeType === 'deep-p') {
-        return <PDeepProbeResults session={session} />;
+        return (
+            <div className="space-y-8">
+                <PDeepProbeResults session={session} />
+                <PhonologicalProcesses session={session} />
+            </div>
+        );
     }
 
     // This part is for 'general' and 'spanish-general' probes
@@ -94,6 +175,7 @@ export function CoverageTracking({ session }: CoverageTrackingProps) {
                 scoringBasis={session.scoringBasis}
                 countUnadministeredAsCorrect={session.countUnadministeredAsCorrect}
             />
+            <PhonologicalProcesses session={session} />
         </div>
     );
 }
