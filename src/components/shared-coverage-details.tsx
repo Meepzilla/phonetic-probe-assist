@@ -4,7 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import type { ErrorType, ProbeWordResult, ScoringBasis } from '@/lib/types';
 import { scoringBasisLabel } from '@/lib/scoring';
 import { useMemo } from 'react';
@@ -46,28 +46,34 @@ const CoverageBadge = ({ phoneme, position, count, words }: { phoneme: string; p
         return "destructive";
     }
 
-    const badge = (
-        <Badge variant={getBadgeVariant(count)} className="text-lg">
-            {count}
-        </Badge>
-    );
-
     if (words && words.length > 0) {
         return (
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    {badge}
-                </TooltipTrigger>
-                <TooltipContent>
+            <Popover>
+                <PopoverTrigger asChild>
+                    <button
+                        type="button"
+                        aria-label={`Correct words for /${phoneme}/ in ${position} position`}
+                        className="inline-flex min-h-[40px] min-w-[40px] cursor-pointer items-center justify-center rounded-md px-1"
+                    >
+                        <Badge variant={getBadgeVariant(count)} className="pointer-events-none text-lg">
+                            {count}
+                        </Badge>
+                    </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto max-w-xs">
                     <p className="font-semibold">Correct words:</p>
                     <ul className="list-disc list-inside">
                         {words.map(w => <li key={w.word}>{w.word}</li>)}
                     </ul>
-                </TooltipContent>
-            </Tooltip>
+                </PopoverContent>
+            </Popover>
         );
     }
-    return badge;
+    return (
+        <Badge variant={getBadgeVariant(count)} className="text-lg">
+            {count}
+        </Badge>
+    );
 }
 
 export function SharedCoverageDetails({ coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits, scoringBasis, countUnadministeredAsCorrect }: SharedCoverageDetailsProps) {
@@ -129,11 +135,10 @@ export function SharedCoverageDetails({ coverage, errors, phoneticInventory, pho
                 <CardHeader>
                     <CardTitle>Phoneme Coverage Details</CardTitle>
                     <CardDescription>
-                        Detailed summary of correct productions for each phoneme across all word positions. A badge will highlight when a sound is produced correctly twice in a position, indicating it is confirmed for that position. Hover over a badge to see the correct words.
+                        Detailed summary of correct productions for each phoneme across all word positions. A badge will highlight when a sound is produced correctly twice in a position, indicating it is confirmed for that position. Tap or click a badge to see the correct words.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <TooltipProvider>
                     {/* Mobile View */}
                     <div className="md:hidden space-y-2">
                         {phonemeSet.map(phoneme => (
@@ -186,7 +191,6 @@ export function SharedCoverageDetails({ coverage, errors, phoneticInventory, pho
                             </TableBody>
                         </Table>
                     </div>
-                    </TooltipProvider>
                 </CardContent>
             </Card>
 
