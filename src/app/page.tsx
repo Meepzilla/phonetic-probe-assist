@@ -228,11 +228,6 @@ export default function Home() {
           )}
         </main>
       </Tabs>
-      <footer className="border-t py-6 mt-12">
-        <div className="container mx-auto px-6 text-center text-muted-foreground text-sm">
-          Powered by Firebase Studio.
-        </div>
-      </footer>
     </div>
   );
 }
