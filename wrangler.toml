@@ -1,0 +1,3 @@
+name = "phonetic-probe-assist"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]
