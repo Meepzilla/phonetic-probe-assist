@@ -31,13 +31,13 @@ interface DetailedResult {
 
 
 export function FDeepProbeResults({ session }: FDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
     const [selectedSection, setSelectedSection] = useState<DetailedResult | null>(null);
 
     const { mainResults, detailedResults, totalCorrect, grandTotal } = useMemo(() => {
         const mainResults: Record<string, ResultSummary> = {
-            'I. II. III. Initial, Medial, Final': { correct: 0, total: 36 },
-            'IV. Blend Combinations': { correct: 0, total: 40 },
+            'I. II. III. Initial, Medial, Final': { correct: 0, total: 0 },
+            'IV. Blend Combinations': { correct: 0, total: 0 },
         };
 
         const detailedResults: DetailedResult[] = F_DEEP_PROBE_SECTIONS.map(section => {
@@ -49,15 +49,17 @@ export function FDeepProbeResults({ session }: FDeepProbeResultsProps) {
                     result.phonemes[index].phoneme.includes('f')
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isCorrect);
+                return targetProductions.every(p => p.isScored && p.isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             if (section.category.startsWith('I.') || section.category.startsWith('II.') || section.category.startsWith('III.')) {
                 mainResults['I. II. III. Initial, Medial, Final'].correct += correctCount;
+                mainResults['I. II. III. Initial, Medial, Final'].total += totalInSection;
             } else if (section.category.startsWith('IV.')) {
                 mainResults['IV. Blend Combinations'].correct += correctCount;
+                mainResults['IV. Blend Combinations'].total += totalInSection;
             }
             
             return {
@@ -171,9 +173,9 @@ export function FDeepProbeResults({ session }: FDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 wordResult.phonemes[i]?.phoneme.includes('f')
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => !p.isCorrect && p.phoneme.phoneme.includes('f'));
+                                .filter(p => p.isScored && !p.isCorrect && p.phoneme.phoneme.includes('f'));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -207,6 +209,8 @@ export function FDeepProbeResults({ session }: FDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

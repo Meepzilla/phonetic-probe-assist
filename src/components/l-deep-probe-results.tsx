@@ -30,13 +30,13 @@ interface DetailedResult {
 }
 
 export function LDeepProbeResults({ session }: LDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
     const [selectedSection, setSelectedSection] = useState<DetailedResult | null>(null);
 
     const { mainResults, detailedResults, totalCorrect, grandTotal } = useMemo(() => {
         const mainResults: Record<string, ResultSummary> = {
-            'Initial, Medial, Final /l/': { correct: 0, total: 36 },
-            'Combinations/Blends': { correct: 0, total: 48 },
+            'Initial, Medial, Final /l/': { correct: 0, total: 0 },
+            'Combinations/Blends': { correct: 0, total: 0 },
         };
 
         const detailedResults: DetailedResult[] = L_DEEP_PROBE_SECTIONS.map(section => {
@@ -48,15 +48,17 @@ export function LDeepProbeResults({ session }: LDeepProbeResultsProps) {
                     result.phonemes[index].phoneme.includes('l')
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isCorrect);
+                return targetProductions.every(p => p.isScored && p.isCorrect);
             }).length;
             
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             if (section.category.includes('INITIAL') || section.category.includes('MEDIAL') || section.category.includes('FINAL')) {
                 mainResults['Initial, Medial, Final /l/'].correct += correctCount;
+                mainResults['Initial, Medial, Final /l/'].total += totalInSection;
             } else if (section.category.includes('BLEND')) {
                 mainResults['Combinations/Blends'].correct += correctCount;
+                mainResults['Combinations/Blends'].total += totalInSection;
             }
             
             return {
@@ -167,9 +169,9 @@ export function LDeepProbeResults({ session }: LDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 wordResult.phonemes[i]?.phoneme.includes('l')
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => !p.isCorrect && p.phoneme.phoneme.includes('l'));
+                                .filter(p => p.isScored && !p.isCorrect && p.phoneme.phoneme.includes('l'));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -203,6 +205,8 @@ export function LDeepProbeResults({ session }: LDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

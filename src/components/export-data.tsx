@@ -37,6 +37,7 @@ export function ExportData({ session }: ExportDataProps) {
                 if (result.skipped) return;
                 result.phonemes.forEach((unit, index) => {
                     const prod = result.productions[index];
+                    if (!prod || !prod.isScored) return;
                     if (!unit.phoneme) return;
                     const rowData = [
                         session.clientId, session.date, result.word, unit.position,
@@ -77,6 +78,9 @@ export function ExportData({ session }: ExportDataProps) {
         const incorrectWords = new Map<string, string[]>();
 
         session.results.forEach(result => {
+            const wordScored = result.productions.some(prod => prod.isScored);
+            if (!wordScored) return;
+
             if (result.skipped) {
                 if (!incorrectWords.has(result.word)) {
                     incorrectWords.set(result.word, []);
@@ -89,6 +93,7 @@ export function ExportData({ session }: ExportDataProps) {
             let isWordCorrect = true;
 
             result.productions.forEach((prod, index) => {
+                if (!prod.isScored) return;
                 if (!prod.isCorrect) {
                     isWordCorrect = false;
                     const phoneme = result.phonemes[index];
@@ -131,7 +136,7 @@ export function ExportData({ session }: ExportDataProps) {
         body += `Client: ${session.clientId}\n`;
         body += `Date: ${new Date(session.date).toLocaleDateString()}\n`;
         body += `Probe Type: ${session.probeType || 'General'}\n`;
-        body += `Words Probed: ${session.results.filter(r => !r.skipped).length} / ${session.wordList.length}\n\n`;
+        body += `Words Probed: ${session.results.filter(r => !r.skipped && r.productions.some(p => p.isScored)).length} / ${session.wordList.length}\n\n`;
 
         body += `--- CORRECTLY PRODUCED WORDS ---\n`;
         if (correctWords.size > 0) {
@@ -168,7 +173,7 @@ export function ExportData({ session }: ExportDataProps) {
                 <div className="p-6 bg-muted/50 rounded-lg text-center space-y-4">
                     <p className="text-muted-foreground">Client: <span className="font-bold text-foreground">{session.clientId}</span></p>
                     <p className="text-muted-foreground">Date: <span className="font-bold text-foreground">{new Date(session.date).toLocaleDateString()}</span></p>
-                    <p className="text-muted-foreground">Words Probed: <span className="font-bold text-foreground">{session.results.filter(r => !r.skipped).length} / {session.wordList.length}</span></p>
+                    <p className="text-muted-foreground">Words Probed: <span className="font-bold text-foreground">{session.results.filter(r => !r.skipped && r.productions.some(p => p.isScored)).length} / {session.wordList.length}</span></p>
                 </div>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row gap-4">

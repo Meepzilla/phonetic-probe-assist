@@ -15,13 +15,14 @@ interface PipResultsProps {
 const PHONEME_CONTRASTS = ['p', 't', 'k', 'w', 'l', 'r'];
 
 export function PipResults({ session }: PipResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
 
     const contrastData = useMemo(() => {
         const grid: (number | null)[][] = Array(6).fill(null).map(() => Array(6).fill(0));
         
         session.results.forEach(result => {
             if (result.skipped) return;
+            if (!result.productions.some(prod => prod.isScored)) return;
             
             const phonemes = result.phonemes.map(p => p.phoneme).filter(p => PHONEME_CONTRASTS.includes(p));
             if (phonemes.length < 2) return;
@@ -110,6 +111,8 @@ export function PipResults({ session }: PipResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

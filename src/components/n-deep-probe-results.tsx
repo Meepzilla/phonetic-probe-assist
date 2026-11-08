@@ -26,7 +26,7 @@ interface SectionResult {
 
 export function NDeepProbeResults({ session }: NDeepProbeResultsProps) {
     const N_TARGETS = ['n', 'ŋ'];
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
     const [selectedSection, setSelectedSection] = useState<SectionResult | null>(null);
 
     const { detailedResults, totalCorrect, grandTotal } = useMemo(() => {
@@ -39,10 +39,10 @@ export function NDeepProbeResults({ session }: NDeepProbeResultsProps) {
                     N_TARGETS.some(target => result.phonemes[index].phoneme.includes(target))
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isCorrect);
+                return targetProductions.every(p => p.isScored && p.isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             return {
                 category: section.category,
@@ -120,9 +120,9 @@ export function NDeepProbeResults({ session }: NDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 N_TARGETS.some(target => wordResult.phonemes[i]?.phoneme.includes(target))
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => !p.isCorrect && N_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
+                                .filter(p => p.isScored && !p.isCorrect && N_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -156,6 +156,8 @@ export function NDeepProbeResults({ session }: NDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

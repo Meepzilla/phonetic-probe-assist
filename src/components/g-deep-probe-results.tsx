@@ -26,7 +26,7 @@ interface SectionResult {
 }
 
 export function GDeepProbeResults({ session }: GDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, onWordClick, selectedWordDetails, setSelectedWordDetails } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits, onWordClick, selectedWordDetails, setSelectedWordDetails } = usePhonemeCoverage(session);
 
     const { detailedResults, totalCorrect, grandTotal } = useMemo(() => {
         const results: SectionResult[] = G_DEEP_PROBE_SECTIONS.map(section => {
@@ -41,10 +41,10 @@ export function GDeepProbeResults({ session }: GDeepProbeResultsProps) {
 
                 if (targetIndices.length === 0) return false;
 
-                return targetIndices.every(index => result.productions[index].isCorrect);
+                return targetIndices.every(index => result.productions[index].isScored && result.productions[index].isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             return {
                 category: section.category,
@@ -117,6 +117,8 @@ export function GDeepProbeResults({ session }: GDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

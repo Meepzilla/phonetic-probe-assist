@@ -32,6 +32,8 @@ interface SharedCoverageDetailsProps {
     phoneticInventory: string[];
     phonemeSet: string[];
     correctWords?: Record<string, Record<string, ProbeWordResult[]>>;
+    attemptedWords?: number;
+    scoredUnits?: number;
 }
 
 const CoverageBadge = ({ phoneme, position, count, words }: { phoneme: string; position: 'initial' | 'medial' | 'final'; count: number; words: ProbeWordResult[] | undefined }) => {
@@ -65,7 +67,7 @@ const CoverageBadge = ({ phoneme, position, count, words }: { phoneme: string; p
     return badge;
 }
 
-export function SharedCoverageDetails({ coverage, errors, phoneticInventory, phonemeSet, correctWords }: SharedCoverageDetailsProps) {
+export function SharedCoverageDetails({ coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits }: SharedCoverageDetailsProps) {
     const errorSummary = useMemo(() => {
         const summary: {[key: string]: number} = {
             substitution: 0,
@@ -87,6 +89,11 @@ export function SharedCoverageDetails({ coverage, errors, phoneticInventory, pho
 
     return (
         <div className="space-y-6 mt-6">
+            {attemptedWords !== undefined && scoredUnits !== undefined && (
+                <p className="text-sm text-muted-foreground">
+                    {attemptedWords} words attempted · {scoredUnits} units scored
+                </p>
+            )}
              <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">

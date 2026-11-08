@@ -28,6 +28,7 @@ export type ProbeType =
 
 export interface PhonemeProduction {
   isCorrect: boolean;
+  isScored: boolean;
   ipa: string;
   errorType?: ErrorType;
   errorDetail?: string;
@@ -36,7 +37,7 @@ export interface PhonemeProduction {
 export interface PhonemeUnit {
   phoneme: string;
   position: 'initial' | 'medial' | 'final';
-  type?: PhonemeType;
+  type: PhonemeType;
   voicing?: Voicing;
   place?: Place;
   manner?: Manner;
@@ -52,6 +53,7 @@ export interface ProbeWordResult {
   category?: string;
   subCategory?: string;
   imageUrl?: string;
+  notes?: string;
 }
 
 export interface ProbeSession {

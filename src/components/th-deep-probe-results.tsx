@@ -31,14 +31,14 @@ interface DetailedResult {
 
 
 export function ThDeepProbeResults({ session }: ThDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
     const [selectedSection, setSelectedSection] = useState<DetailedResult | null>(null);
 
     const { resultsByMainCategory, detailedResults, totalCorrect, grandTotal } = useMemo(() => {
         const mainCategories: Record<string, ResultSummary> = {
-            'Unvoiced /θ/: Initial, Medial, Final': { correct: 0, total: 36 },
-            'Unvoiced /θ/: Blend Combinations': { correct: 0, total: 12 },
-            'Voiced /ð/: Initial, Medial, Final, & Comb.': { correct: 0, total: 24 },
+            'Unvoiced /θ/: Initial, Medial, Final': { correct: 0, total: 0 },
+            'Unvoiced /θ/: Blend Combinations': { correct: 0, total: 0 },
+            'Voiced /ð/: Initial, Medial, Final, & Comb.': { correct: 0, total: 0 },
         };
 
         const detailedResults: DetailedResult[] = TH_DEEP_PROBE_SECTIONS.map(section => {
@@ -53,10 +53,10 @@ export function ThDeepProbeResults({ session }: ThDeepProbeResultsProps) {
                     targets.some(target => result.phonemes[index].phoneme.includes(target))
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isCorrect);
+                return targetProductions.every(p => p.isScored && p.isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             return {
                 ...section,
                 correct: correctCount,
@@ -73,10 +73,13 @@ export function ThDeepProbeResults({ session }: ThDeepProbeResultsProps) {
 
             if (res.category.startsWith('I.') || res.category.startsWith('II.') || res.category.startsWith('III.')) {
                 mainCategories['Unvoiced /θ/: Initial, Medial, Final'].correct += res.correct;
+                mainCategories['Unvoiced /θ/: Initial, Medial, Final'].total += res.total;
             } else if (res.category.startsWith('IV.')) {
                 mainCategories['Unvoiced /θ/: Blend Combinations'].correct += res.correct;
+                mainCategories['Unvoiced /θ/: Blend Combinations'].total += res.total;
             } else if (res.category.startsWith('V.') || res.category.startsWith('VI.') || res.category.startsWith('VII.') || res.category.startsWith('VIII.')) {
                 mainCategories['Voiced /ð/: Initial, Medial, Final, & Comb.'].correct += res.correct;
+                mainCategories['Voiced /ð/: Initial, Medial, Final, & Comb.'].total += res.total;
             }
         });
         
@@ -180,9 +183,9 @@ export function ThDeepProbeResults({ session }: ThDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 TH_TARGETS.some(target => wordResult.phonemes[i]?.phoneme.includes(target))
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => !p.isCorrect && TH_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
+                                .filter(p => p.isScored && !p.isCorrect && TH_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -216,6 +219,8 @@ export function ThDeepProbeResults({ session }: ThDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

@@ -30,7 +30,7 @@ interface DetailedResult {
 }
 
 export function SDeepProbeResults({ session }: SDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
     const [selectedSection, setSelectedSection] = useState<DetailedResult | null>(null);
 
     const { resultsByMainCategory, detailedResults, totalCorrect, grandTotal } = useMemo(() => {
@@ -52,10 +52,10 @@ export function SDeepProbeResults({ session }: SDeepProbeResultsProps) {
 
                 if (targetIndices.length === 0) return false;
 
-                return targetIndices.every(index => result.productions[index].isCorrect);
+                return targetIndices.every(index => result.productions[index].isScored && result.productions[index].isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
 
              if (section.category.startsWith('I.')) {
                 mainCategories['Initial /s/'].correct += correctCount;
@@ -202,9 +202,9 @@ export function SDeepProbeResults({ session }: SDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 wordResult.phonemes[i]?.phoneme.includes('s')
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => !p.isCorrect && p.phoneme.phoneme.includes('s'));
+                                .filter(p => p.isScored && !p.isCorrect && p.phoneme.phoneme.includes('s'));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -238,6 +238,8 @@ export function SDeepProbeResults({ session }: SDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );

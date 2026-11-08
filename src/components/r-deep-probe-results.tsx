@@ -30,17 +30,17 @@ interface DetailedResult {
 }
 
 export function RDeepProbeResults({ session }: RDeepProbeResultsProps) {
-    const { coverage, errors, phoneticInventory, phonemeSet, correctWords } = usePhonemeCoverage(session);
+    const { coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits } = usePhonemeCoverage(session);
     const [selectedSection, setSelectedSection] = useState<DetailedResult | null>(null);
 
     const { resultsByMainCategory, detailedResults, totalCorrect, grandTotal } = useMemo(() => {
         const R_TARGETS = ['ɹ', 'ɝ', 'ɚ'];
         const mainCategories: Record<string, ResultSummary> = {
-            'I. PREVOCALIC CONSONANTAL /r/': { correct: 0, total: 36 },
-            'II. CONSONANTAL /r/ CLUSTERS': { correct: 0, total: 24 },
-            'III. STRESSED VOCALIC /ɝ/': { correct: 0, total: 8 },
-            'IV. UNSTRESSED VOCALIC /ɚ/': { correct: 0, total: 4 },
-            'V. VOWEL OR DIPHTHONG + STRESSED /r/': { correct: 0, total: 24 },
+            'I. PREVOCALIC CONSONANTAL /r/': { correct: 0, total: 0 },
+            'II. CONSONANTAL /r/ CLUSTERS': { correct: 0, total: 0 },
+            'III. STRESSED VOCALIC /ɝ/': { correct: 0, total: 0 },
+            'IV. UNSTRESSED VOCALIC /ɚ/': { correct: 0, total: 0 },
+            'V. VOWEL OR DIPHTHONG + STRESSED /r/': { correct: 0, total: 0 },
         };
 
         const detailedResults: DetailedResult[] = R_DEEP_PROBE_SECTIONS.map(section => {
@@ -52,14 +52,15 @@ export function RDeepProbeResults({ session }: RDeepProbeResultsProps) {
                     R_TARGETS.some(target => result.phonemes[index].phoneme.includes(target))
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isCorrect);
+                return targetProductions.every(p => p.isScored && p.isCorrect);
             }).length;
 
-            const totalInSection = section.words.length;
+            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
             
             const mainCategoryKey = Object.keys(mainCategories).find(k => section.category.startsWith(k.split(' ')[0]));
             if (mainCategoryKey) {
                 mainCategories[mainCategoryKey].correct += correctCount;
+                mainCategories[mainCategoryKey].total += totalInSection;
             }
             
             return {
@@ -172,9 +173,9 @@ export function RDeepProbeResults({ session }: RDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 R_TARGETS.some(target => wordResult.phonemes[i]?.phoneme.includes(target))
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => !p.isCorrect && R_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
+                                .filter(p => p.isScored && !p.isCorrect && R_TARGETS.some(target => p.phoneme.phoneme.includes(target)));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -208,6 +209,8 @@ export function RDeepProbeResults({ session }: RDeepProbeResultsProps) {
                 phoneticInventory={phoneticInventory}
                 phonemeSet={phonemeSet}
                 correctWords={correctWords}
+                attemptedWords={attemptedWords}
+                scoredUnits={scoredUnits}
             />
         </div>
     );
