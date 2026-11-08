@@ -1,14 +1,14 @@
 
 'use client';
 
-import React, { useState, useTransition, useActionState } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { INITIAL_WORD_LIST, DIALECTS, WORD_BANK, SPANISH_WORD_BANK, SPANISH_INITIAL_WORD_LIST } from '@/lib/constants';
+import { INITIAL_WORD_LIST, WORD_BANK, SPANISH_WORD_BANK, SPANISH_INITIAL_WORD_LIST } from '@/lib/constants';
 import { S_DEEP_PROBE_SECTIONS, S_WORD_BANK } from '@/lib/s-probe-constants';
 import { TH_DEEP_PROBE_SECTIONS, TH_WORD_BANK } from '@/lib/th-probe-constants';
 import { R_DEEP_PROBE_SECTIONS, R_WORD_BANK } from '@/lib/r-probe-constants';
@@ -25,10 +25,9 @@ import { N_DEEP_PROBE_SECTIONS, N_WORD_BANK } from '@/lib/n-probe-constants';
 import { B_DEEP_PROBE_SECTIONS, B_WORD_BANK } from '@/lib/b-probe-constants';
 import { P_DEEP_PROBE_SECTIONS, P_WORD_BANK } from '@/lib/p-probe-constants';
 import { PIP_SECTIONS, PIP_WORD_BANK } from '@/lib/pip-probe-constants';
-import { handleAdaptWordList } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import type { ProbeSession, ProbeWordResult, PhonemeUnit, ProbeType } from '@/lib/types';
-import { Bot, Loader2, Info } from 'lucide-react';
+import { Info } from 'lucide-react';
 
 interface SessionSetupProps {
     onSessionStart: (session: ProbeSession) => void;
@@ -81,26 +80,6 @@ export function SessionSetup({ onSessionStart }: SessionSetupProps) {
     const [probeType, setProbeType] = useState<ProbeType>('general');
     const { toast } = useToast();
     
-    const [isPending, startTransition] = useTransition();
-    const [state, formAction] = useActionState(handleAdaptWordList, null);
-
-    React.useEffect(() => {
-        if (state?.message !== 'success' && state?.message) {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: state.message,
-            });
-        }
-        if (state?.adaptedWordList) {
-            setWordList(state.adaptedWordList.join(', '));
-            toast({
-                title: 'Success',
-                description: 'Word list adapted for the selected dialect.',
-            });
-        }
-    }, [state, toast]);
-
     const handleStartSession = () => {
         if (!clientId.trim()) {
             toast({
@@ -150,7 +129,7 @@ export function SessionSetup({ onSessionStart }: SessionSetupProps) {
                  toast({
                     variant: 'destructive',
                     title: 'Invalid Word List',
-                    description: 'None of the words are in the word bank. Please use words from the bank or adapt the list.',
+                    description: 'None of the words are in the word bank. Please use words from the bank.',
                 });
                 return;
             }
@@ -242,48 +221,27 @@ export function SessionSetup({ onSessionStart }: SessionSetupProps) {
                 {probeType === 'general' && (
                     <Card className="bg-muted/30">
                         <CardHeader>
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <Bot className="text-accent" /> Word List Generation
-                            </CardTitle>
+                            <CardTitle className="text-lg">Word List</CardTitle>
                             <CardDescription>
-                                Enter a comma-separated list of words. You can use the AI feature to adapt this list to a specific dialect.
+                                Enter a comma-separated list of words.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form action={formAction} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="word-list">Probe Words</Label>
-                                    <Textarea
-                                        id="word-list"
-                                        name="wordList"
-                                        placeholder="e.g., sun, cat, dog"
-                                        value={wordList}
-                                        onChange={(e) => setWordList(e.target.value)}
-                                        rows={5}
-                                        disabled={probeType !== 'general'}
-                                    />
-                                </div>
-                                <div className="flex flex-col sm:flex-row gap-4">
-                                    <div className="space-y-2 flex-1">
-                                        <Label htmlFor="dialect">Target Dialect</Label>
-                                        <Select name="dialect" defaultValue={DIALECTS[0]}>
-                                            <SelectTrigger id="dialect">
-                                                <SelectValue placeholder="Select a dialect" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {DIALECTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="self-end w-full sm:w-auto">
-                                    <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" disabled={isPending} onClick={() => startTransition(() => {})}>
-                                            {isPending ? <Loader2 className="animate-spin" /> : 'Adapt for Dialect'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </form>
+                            <div className="space-y-2">
+                                <Label htmlFor="word-list">Probe Words</Label>
+                                <Textarea
+                                    id="word-list"
+                                    name="wordList"
+                                    placeholder="e.g., sun, cat, dog"
+                                    value={wordList}
+                                    onChange={(e) => setWordList(e.target.value)}
+                                    rows={5}
+                                    disabled={probeType !== 'general'}
+                                />
+                            </div>
                         </CardContent>
                     </Card>
+
                 )}
                  {probeType !== 'general' && probeType !== 'spanish-general' && (
                     <Card className="bg-muted/30">

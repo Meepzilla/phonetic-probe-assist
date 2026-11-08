@@ -6,8 +6,8 @@ Source code exported from Firebase Studio on 2026-11-07 as a backup. The Firebas
 
 ## Run locally
 
-Copy .env.example to .env and set GEMINI_API_KEY, then run npm install and npm run dev. The AI flows in src/ai run on the server and need that key.
+Run npm install and npm run dev. No API key or secret is needed. The AI features have been removed, so dialect adaptation and per-word image generation are no longer available.
 
 ## Cloudflare hosting
 
-This is a Next.js app with server-side AI flows, so it deploys to Cloudflare Workers, not as a static site. The OpenNext Cloudflare adapter is installed. Run npm run deploy to build and deploy to Cloudflare Workers, or npm run preview to test the Worker locally. Set the key once with npx wrangler secret put GEMINI_API_KEY. Never commit the key.
+This is a Next.js app, so it deploys to Cloudflare Workers, not as a static site. The OpenNext Cloudflare adapter is installed. Run npm run deploy to build and deploy to Cloudflare Workers, or npm run preview to test the Worker locally. No API key or secret is needed.

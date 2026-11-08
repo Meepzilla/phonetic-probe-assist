@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useTransition } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   Card,
@@ -61,16 +61,13 @@ import {
   ChevronRight,
   CheckCircle,
   SkipForward,
-  Pencil,
-  Sparkles,
-  Loader2
+  Pencil
 } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { IpaKeyboard } from './ipa-keyboard';
-import { handleGenerateImage } from '@/lib/actions';
-import { useToast } from '@/hooks/use-toast';
+
 
 interface ProbeAdministrationProps {
   session: ProbeSession;
@@ -92,8 +89,6 @@ export function ProbeAdministration({
   );
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [focusedInputIndex, setFocusedInputIndex] = useState<number | null>(null);
-  const [isGenerating, startTransition] = useTransition();
-  const { toast } = useToast();
 
   useEffect(() => {
     setCurrentResult(session.results[currentWordIndex]);
@@ -189,31 +184,6 @@ export function ProbeAdministration({
     }
   };
 
-  const onGenerateImage = async () => {
-    startTransition(async () => {
-      const result = await handleGenerateImage({ word: currentResult.word });
-      if (result?.imageUrl) {
-        const newResult = {
-          ...currentResult,
-          imageUrl: result.imageUrl,
-        };
-        setCurrentResult(newResult);
-        updateResult(currentWordIndex, newResult);
-        setIsImageModalOpen(false);
-        toast({
-          title: 'Image Generated!',
-          description: `A new image for "${currentResult.word}" has been created.`,
-        });
-      } else {
-        toast({
-          variant: 'destructive',
-          title: 'Generation Failed',
-          description: result?.message || 'Could not generate image. Please try again.',
-        });
-      }
-    });
-  };
-
     const handleIpaButtonClick = (char: string) => {
         if (focusedInputIndex === null) return;
         const currentIpa = currentResult.productions[focusedInputIndex].ipa;
@@ -243,14 +213,15 @@ export function ProbeAdministration({
         <CardContent className="grid md:grid-cols-2 gap-8 items-start">
           <div className="flex flex-col items-center justify-start space-y-4">
             <div className="relative">
-              <Image
-                src={currentResult.imageUrl || `https://placehold.co/400x300.png?text=${currentResult.word}`}
-                alt={currentResult.word}
-                width={400}
-                height={300}
-                className="rounded-lg shadow-md object-cover"
-                data-ai-hint={currentResult.word}
-              />
+              {currentResult.imageUrl && (
+                <Image
+                  src={currentResult.imageUrl}
+                  alt={currentResult.word}
+                  width={400}
+                  height={300}
+                  className="rounded-lg shadow-md object-cover"
+                />
+              )}
                <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogTrigger asChild>
                     <Button variant="outline" size="icon" className="absolute top-2 right-2 bg-background/70 hover:bg-background">
@@ -262,32 +233,13 @@ export function ProbeAdministration({
                     <DialogHeader>
                         <DialogTitle>Update Image for "{currentResult.word}"</DialogTitle>
                         <DialogDescription>
-                            Upload your own image or generate a new one using AI.
+                            Upload your own image.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-6 py-4">
                          <div className="space-y-2">
                             <Label htmlFor="image-upload">Upload From Device</Label>
                             <Input id="image-upload" type="file" accept="image/*" onChange={handleImageUpload} />
-                        </div>
-                        <div className="relative">
-                           <div className="absolute inset-0 flex items-center">
-                               <span className="w-full border-t" />
-                           </div>
-                           <div className="relative flex justify-center text-xs uppercase">
-                               <span className="bg-background px-2 text-muted-foreground">Or</span>
-                           </div>
-                        </div>
-                        <div className="space-y-2">
-                             <Label>Generate with AI</Label>
-                              <Button onClick={onGenerateImage} disabled={isGenerating} className="w-full">
-                                {isGenerating ? (
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                ) : (
-                                    <Sparkles className="mr-2 h-4 w-4" />
-                                )}
-                                Generate Child-Friendly Image
-                            </Button>
                         </div>
                     </div>
                 </DialogContent>
