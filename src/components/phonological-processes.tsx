@@ -8,6 +8,9 @@ import { Button } from '@/components/ui/button';
 import type { ProbeSession } from '@/lib/types';
 import {
     analyzePhonologicalProcesses,
+    formatAgeReference,
+    PHONOLOGICAL_PROCESS_AGE_REFERENCE,
+    PHONOLOGICAL_PROCESS_DEFINITIONS,
     type PhonologicalProcessResult,
 } from '@/lib/phonological-processes';
 
@@ -28,6 +31,11 @@ function ProcessRow({ process }: { process: PhonologicalProcessResult }) {
             <p className="text-sm text-muted-foreground">
                 {process.occurrences} of {process.opportunities} opportunities · {process.percent}%
             </p>
+            {PHONOLOGICAL_PROCESS_AGE_REFERENCE[process.id] && (
+                <p className="text-sm text-muted-foreground">
+                    {formatAgeReference(PHONOLOGICAL_PROCESS_AGE_REFERENCE[process.id])}
+                </p>
+            )}
             {process.examples.length > 0 && (
                 <>
                     <Button
@@ -59,6 +67,48 @@ function ProcessRow({ process }: { process: PhonologicalProcessResult }) {
                         </ul>
                     )}
                 </>
+            )}
+        </div>
+    );
+}
+
+function AgeReferenceSection() {
+    const [expanded, setExpanded] = useState(false);
+    const panelId = 'phonological-process-age-reference';
+
+    return (
+        <div className="border-t pt-3 space-y-2">
+            <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="min-h-[40px] px-2 -ml-2"
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                onClick={() => setExpanded((value) => !value)}
+            >
+                {expanded ? (
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                ) : (
+                    <ChevronRight className="h-4 w-4 mr-1" />
+                )}
+                Elimination age reference (all processes)
+            </Button>
+            {expanded && (
+                <ul id={panelId} className="divide-y">
+                    {PHONOLOGICAL_PROCESS_DEFINITIONS.map((definition) => {
+                        const reference = PHONOLOGICAL_PROCESS_AGE_REFERENCE[definition.id];
+                        if (!reference) return null;
+                        return (
+                            <li key={definition.id} className="py-2 space-y-0.5">
+                                <p className="text-sm font-medium">{definition.label}</p>
+                                <p className="text-sm text-muted-foreground">
+                                    {formatAgeReference(reference)}
+                                </p>
+                            </li>
+                        );
+                    })}
+                </ul>
             )}
         </div>
     );
@@ -116,6 +166,14 @@ export function PhonologicalProcesses({ session }: PhonologicalProcessesProps) {
                         </p>
                     </>
                 )}
+                <AgeReferenceSection />
+                <p className="text-xs text-muted-foreground">
+                    Elimination age sources: Bowen (2011, after Grunwell, 1987); ASHA, Selected
+                    Phonological Patterns; Peña-Brooks &amp; Hegde (2015); Bleile (1995);
+                    Linguisystems (2008); Lowe (2000). Ages are typical elimination points from
+                    English normative data. They vary across studies and across children, and
+                    Spanish speech development follows a different timetable.
+                </p>
             </CardContent>
         </Card>
     );
