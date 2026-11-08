@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,11 @@ import {
     listWordImages,
     type WordImageMeta,
 } from '@/lib/word-image-db';
+import {
+    ensureDefaultPictogramsSeeded,
+    getPictogramSeedStatus,
+    subscribeToPictogramSeedStatus,
+} from '@/lib/pictogram-seed';
 import { Trash2 } from 'lucide-react';
 
 /**
@@ -27,6 +32,11 @@ function WordImageLibrary() {
     const [removeError, setRemoveError] = useState<string | null>(null);
     const [importSummary, setImportSummary] = useState<string | null>(null);
     const [importError, setImportError] = useState<string | null>(null);
+    const seedStatus = useSyncExternalStore(
+        subscribeToPictogramSeedStatus,
+        getPictogramSeedStatus,
+        getPictogramSeedStatus
+    );
 
     const refresh = useCallback(async () => {
         try {
@@ -52,6 +62,20 @@ function WordImageLibrary() {
     useEffect(() => {
         refresh();
     }, [refresh]);
+
+    // Seeding normally starts from the app root on launch; calling here
+    // too is harmless (it short-circuits once done) and lets a failed run
+    // retry when Settings is opened. When a run completes, reload the
+    // list so the freshly seeded images show up.
+    useEffect(() => {
+        void ensureDefaultPictogramsSeeded();
+    }, []);
+
+    useEffect(() => {
+        if (seedStatus.state === 'seeded') {
+            refresh();
+        }
+    }, [seedStatus.state, refresh]);
 
     const handleRemove = async (key: string) => {
         try {
@@ -99,6 +123,26 @@ function WordImageLibrary() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
+                {seedStatus.state === 'seeding' && (
+                    <p className="text-sm text-muted-foreground">
+                        Default pictograms: loading {seedStatus.done} of {seedStatus.total}
+                    </p>
+                )}
+                {seedStatus.state === 'seeded' && (
+                    <p className="text-sm text-muted-foreground">
+                        {seedStatus.total > 0
+                            ? `Default pictograms: ${seedStatus.total} loaded`
+                            : 'Default pictograms: loaded'}
+                    </p>
+                )}
+                {seedStatus.state === 'failed' && (
+                    <p className="text-sm text-muted-foreground">
+                        Default pictograms could not be loaded. They will be tried again on the next launch.
+                    </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                    The default pictograms are ARASAAC pictograms (arasaac.org), created by Sergio Palao for the Government of Aragon, and distributed under the Creative Commons CC BY-NC-SA license.
+                </p>
                 {unavailable && (
                     <p className="text-sm text-muted-foreground">
                         The word image library is unavailable on this device.
