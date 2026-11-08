@@ -4,6 +4,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import type { ProbeSession } from '@/lib/types';
+import { isProductionCounted, scoringBasisLabel } from '@/lib/scoring';
 import { Download, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { usePhonemeCoverage } from '@/hooks/use-phoneme-coverage';
@@ -15,6 +16,10 @@ interface ExportDataProps {
 export function ExportData({ session }: ExportDataProps) {
     const { toast } = useToast();
     const { errors } = usePhonemeCoverage(session);
+
+    const wordsProbedCount = session.scoringBasis === 'full'
+        ? session.results.filter(r => !r.skipped).length
+        : session.results.filter(r => !r.skipped && r.productions.some(p => isProductionCounted(p, session))).length;
 
     const escapeCsvField = (field: any): string => {
         const stringField = String(field ?? '');
@@ -37,7 +42,7 @@ export function ExportData({ session }: ExportDataProps) {
                 if (result.skipped) return;
                 result.phonemes.forEach((unit, index) => {
                     const prod = result.productions[index];
-                    if (!prod || !prod.isScored) return;
+                    if (!isProductionCounted(prod, session)) return;
                     if (!unit.phoneme) return;
                     const rowData = [
                         session.clientId, session.date, result.word, unit.position,
@@ -78,8 +83,8 @@ export function ExportData({ session }: ExportDataProps) {
         const incorrectWords = new Map<string, string[]>();
 
         session.results.forEach(result => {
-            const wordScored = result.productions.some(prod => prod.isScored);
-            if (!wordScored) return;
+            const wordCounted = result.productions.some(prod => isProductionCounted(prod, session));
+            if (!wordCounted) return;
 
             if (result.skipped) {
                 if (!incorrectWords.has(result.word)) {
@@ -93,7 +98,7 @@ export function ExportData({ session }: ExportDataProps) {
             let isWordCorrect = true;
 
             result.productions.forEach((prod, index) => {
-                if (!prod.isScored) return;
+                if (!isProductionCounted(prod, session)) return;
                 if (!prod.isCorrect) {
                     isWordCorrect = false;
                     const phoneme = result.phonemes[index];
@@ -136,7 +141,8 @@ export function ExportData({ session }: ExportDataProps) {
         body += `Client: ${session.clientId}\n`;
         body += `Date: ${new Date(session.date).toLocaleDateString()}\n`;
         body += `Probe Type: ${session.probeType || 'General'}\n`;
-        body += `Words Probed: ${session.results.filter(r => !r.skipped && r.productions.some(p => p.isScored)).length} / ${session.wordList.length}\n\n`;
+        body += `Scoring Basis: ${scoringBasisLabel(session.scoringBasis)}; Unadministered Words Counted as Correct: ${session.countUnadministeredAsCorrect ? 'Yes' : 'No'}\n`;
+        body += `Words Probed: ${wordsProbedCount} / ${session.wordList.length}\n\n`;
 
         body += `--- CORRECTLY PRODUCED WORDS ---\n`;
         if (correctWords.size > 0) {
@@ -173,7 +179,7 @@ export function ExportData({ session }: ExportDataProps) {
                 <div className="p-6 bg-muted/50 rounded-lg text-center space-y-4">
                     <p className="text-muted-foreground">Client: <span className="font-bold text-foreground">{session.clientId}</span></p>
                     <p className="text-muted-foreground">Date: <span className="font-bold text-foreground">{new Date(session.date).toLocaleDateString()}</span></p>
-                    <p className="text-muted-foreground">Words Probed: <span className="font-bold text-foreground">{session.results.filter(r => !r.skipped && r.productions.some(p => p.isScored)).length} / {session.wordList.length}</span></p>
+                    <p className="text-muted-foreground">Words Probed: <span className="font-bold text-foreground">{wordsProbedCount} / {session.wordList.length}</span></p>
                 </div>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row gap-4">

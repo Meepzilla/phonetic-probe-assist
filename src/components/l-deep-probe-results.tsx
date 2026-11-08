@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import type { ProbeSession, ProbeWordResult } from '@/lib/types';
+import { isProductionCorrect, isProductionCounted } from '@/lib/scoring';
 import { useMemo, useState } from 'react';
 import { L_DEEP_PROBE_SECTIONS } from '@/lib/l-probe-constants';
 import { usePhonemeCoverage } from '@/hooks/use-phoneme-coverage';
@@ -48,10 +49,10 @@ export function LDeepProbeResults({ session }: LDeepProbeResultsProps) {
                     result.phonemes[index].phoneme.includes('l')
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isScored && p.isCorrect);
+                return targetProductions.every(p => isProductionCorrect(p, session));
             }).length;
             
-            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
+            const totalInSection = session.scoringBasis === 'full' ? wordsInSection.length : wordsInSection.filter(r => r.productions.some(prod => isProductionCounted(prod, session))).length;
             
             if (section.category.includes('INITIAL') || section.category.includes('MEDIAL') || section.category.includes('FINAL')) {
                 mainResults['Initial, Medial, Final /l/'].correct += correctCount;
@@ -169,9 +170,9 @@ export function LDeepProbeResults({ session }: LDeepProbeResultsProps) {
                             const targetProductions = wordResult.productions.filter((p, i) => 
                                 wordResult.phonemes[i]?.phoneme.includes('l')
                             );
-                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => p.isScored && p.isCorrect);
+                            const isWordCorrect = !wordResult.skipped && targetProductions.every(p => isProductionCorrect(p, session));
                             const wordErrors = wordResult.productions.map((p, i) => ({...p, phoneme: wordResult.phonemes[i]}))
-                                .filter(p => p.isScored && !p.isCorrect && p.phoneme.phoneme.includes('l'));
+                                .filter(p => isProductionCounted(p, session) && !p.isCorrect && p.phoneme.phoneme.includes('l'));
 
                             return (
                                 <div key={wordResult.word} className="flex items-start justify-between p-3 rounded-lg border">
@@ -207,6 +208,8 @@ export function LDeepProbeResults({ session }: LDeepProbeResultsProps) {
                 correctWords={correctWords}
                 attemptedWords={attemptedWords}
                 scoredUnits={scoredUnits}
+                scoringBasis={session.scoringBasis}
+                countUnadministeredAsCorrect={session.countUnadministeredAsCorrect}
             />
         </div>
     );

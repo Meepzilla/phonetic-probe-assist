@@ -1,5 +1,7 @@
 export type ErrorType = 'substitution' | 'omission' | 'distortion' | 'addition';
 
+export type ScoringBasis = 'attempted' | 'full';
+
 export type PhonemeType = 'consonant' | 'vowel';
 export type Voicing = 'voiced' | 'voiceless';
 export type Manner = 'stop' | 'fricative' | 'affricate' | 'nasal' | 'liquid' | 'glide';
@@ -63,6 +65,8 @@ export interface ProbeSession {
   wordList: string[];
   results: ProbeWordResult[];
   probeType?: ProbeType;
+  countUnadministeredAsCorrect: boolean;
+  scoringBasis: ScoringBasis;
 }
 
 export interface DeepProbeSection {

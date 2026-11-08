@@ -4,6 +4,7 @@
 import { useMemo, useState } from 'react';
 import type { ProbeSession, ErrorType, ProbeWordResult } from '@/lib/types';
 import { ALL_PHONEMES, ALL_SPANISH_PHONEMES } from '@/lib/constants';
+import { isProductionCounted } from '@/lib/scoring';
 
 interface CoverageData {
     [phoneme: string]: {
@@ -38,12 +39,12 @@ export function usePhonemeCoverage(session: ProbeSession | null) {
         let scoredUnits = 0;
 
         session.results.forEach(result => {
-            const wordScored = result.productions.some(prod => prod.isScored);
-            if (!wordScored) return;
+            const wordCounted = result.productions.some(prod => isProductionCounted(prod, session));
+            if (!wordCounted) return;
 
             if (!result.skipped) {
                 attemptedWords++;
-                scoredUnits += result.productions.filter(prod => prod.isScored).length;
+                scoredUnits += result.productions.filter(prod => isProductionCounted(prod, session)).length;
             }
 
             if (result.skipped) {
@@ -64,7 +65,7 @@ export function usePhonemeCoverage(session: ProbeSession | null) {
 
             result.phonemes.forEach((unit, index) => {
                 const prod = result.productions[index];
-                if (!prod || !prod.isScored) return; // Guard against missing or unscored production data
+                if (!isProductionCounted(prod, session)) return; // Guard against missing production data and productions that do not count under the session's scoring settings
                 const position = unit.position;
                 const targetPhoneme = unit.phoneme;
 

@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import type { ProbeSession } from '@/lib/types';
+import { isProductionCounted, scoringBasisLabel } from '@/lib/scoring';
 import { useMemo } from 'react';
 
 interface PCCProps {
@@ -16,6 +17,7 @@ export function PCC({ session }: PCCProps) {
         let totalConsonants = 0;
         let correctConsonants = 0;
         let attemptedWords = 0;
+        const fullBasis = session.scoringBasis === 'full';
 
         session.results.forEach(result => {
             if (result.skipped) return;
@@ -23,13 +25,16 @@ export function PCC({ session }: PCCProps) {
             let wordAttempted = false;
             result.phonemes.forEach((unit, index) => {
                 const production = result.productions[index];
-                if (production?.isScored) {
+                const counted = isProductionCounted(production, session);
+                if (counted) {
                     wordAttempted = true;
-                    if (unit.type === 'consonant') {
+                }
+                if (unit.type === 'consonant') {
+                    if (fullBasis || counted) {
                         totalConsonants++;
-                        if (production.isCorrect) {
-                            correctConsonants++;
-                        }
+                    }
+                    if (counted && production?.isCorrect) {
+                        correctConsonants++;
                     }
                 }
             });
@@ -63,7 +68,7 @@ export function PCC({ session }: PCCProps) {
                 </div>
                 <Progress value={isScored ? pcc : 0} className="w-full" />
                 <p className="text-sm text-muted-foreground">
-                    {attemptedWords} words attempted · {scoredConsonants} consonant units scored
+                    {attemptedWords} words attempted · {scoredConsonants} consonant units scored · Scoring basis: {scoringBasisLabel(session.scoringBasis)} · Unadministered words count as correct: {session.countUnadministeredAsCorrect ? 'Yes' : 'No'}
                 </p>
             </CardContent>
         </Card>

@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { INITIAL_WORD_LIST, WORD_BANK, SPANISH_WORD_BANK, SPANISH_INITIAL_WORD_LIST } from '@/lib/constants';
 import { S_DEEP_PROBE_SECTIONS, S_WORD_BANK } from '@/lib/s-probe-constants';
 import { TH_DEEP_PROBE_SECTIONS, TH_WORD_BANK } from '@/lib/th-probe-constants';
@@ -26,7 +28,7 @@ import { B_DEEP_PROBE_SECTIONS, B_WORD_BANK } from '@/lib/b-probe-constants';
 import { P_DEEP_PROBE_SECTIONS, P_WORD_BANK } from '@/lib/p-probe-constants';
 import { PIP_SECTIONS, PIP_WORD_BANK } from '@/lib/pip-probe-constants';
 import { useToast } from '@/hooks/use-toast';
-import type { ProbeSession, ProbeWordResult, PhonemeUnit, ProbeType } from '@/lib/types';
+import type { ProbeSession, ProbeWordResult, PhonemeUnit, ProbeType, ScoringBasis } from '@/lib/types';
 import { Info } from 'lucide-react';
 
 interface SessionSetupProps {
@@ -78,6 +80,8 @@ export function SessionSetup({ onSessionStart }: SessionSetupProps) {
     const [clientId, setClientId] = useState('Guest');
     const [wordList, setWordList] = useState(INITIAL_WORD_LIST.join(', '));
     const [probeType, setProbeType] = useState<ProbeType>('general');
+    const [countUnadministeredAsCorrect, setCountUnadministeredAsCorrect] = useState(false);
+    const [scoringBasis, setScoringBasis] = useState<ScoringBasis>('attempted');
     const { toast } = useToast();
     
     const handleStartSession = () => {
@@ -159,6 +163,8 @@ export function SessionSetup({ onSessionStart }: SessionSetupProps) {
             wordList: Array.from(new Set(sessionWords)), // Ensure unique words
             results: sessionResults.filter((v, i, a) => a.findIndex(t => (t.word === v.word)) === i), // Ensure unique results
             probeType: probeType,
+            countUnadministeredAsCorrect,
+            scoringBasis,
         };
         onSessionStart(newSession);
     };
@@ -217,7 +223,54 @@ export function SessionSetup({ onSessionStart }: SessionSetupProps) {
                         </p>
                     </CardContent>
                 </Card>
-                
+
+                <Card className="bg-muted/30">
+                    <CardHeader>
+                        <CardTitle className="text-lg">Scoring Options</CardTitle>
+                        <CardDescription>
+                            Choose how unadministered words and percentage denominators are handled for this session.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="space-y-1">
+                                <Label htmlFor="count-unadministered">Count unadministered words as correct</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    For mark-errors-only administration: words that are presented but not scored count as correct in every result and export.
+                                </p>
+                            </div>
+                            <Switch
+                                id="count-unadministered"
+                                checked={countUnadministeredAsCorrect}
+                                onCheckedChange={setCountUnadministeredAsCorrect}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Scoring basis</Label>
+                            <RadioGroup value={scoringBasis} onValueChange={(val: ScoringBasis) => setScoringBasis(val)} className="space-y-3">
+                                <div className="flex items-start gap-3">
+                                    <RadioGroupItem value="attempted" id="basis-attempted" className="mt-1" />
+                                    <div className="space-y-1">
+                                        <Label htmlFor="basis-attempted">Percent of attempted</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            Percentages use only the words actually administered as the denominator.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-start gap-3">
+                                    <RadioGroupItem value="full" id="basis-full" className="mt-1" />
+                                    <div className="space-y-1">
+                                        <Label htmlFor="basis-full">Percent of full probe</Label>
+                                        <p className="text-sm text-muted-foreground">
+                                            Percentages use the full planned word list as the denominator, including words that were not administered.
+                                        </p>
+                                    </div>
+                                </div>
+                            </RadioGroup>
+                        </div>
+                    </CardContent>
+                </Card>
+
                 {probeType === 'general' && (
                     <Card className="bg-muted/30">
                         <CardHeader>
