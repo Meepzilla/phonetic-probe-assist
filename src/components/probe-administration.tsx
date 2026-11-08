@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Image from 'next/image';
 import {
   Card,
@@ -84,15 +84,13 @@ export function ProbeAdministration({
   updateResult,
   onFinish,
 }: ProbeAdministrationProps) {
-  const [currentResult, setCurrentResult] = useState<ProbeWordResult>(
-    session.results[currentWordIndex]
-  );
+  // The form reads the session result directly and every edit commits
+  // through updateResult immediately (commit-on-change), so switching phase
+  // tabs, which unmounts this component, loses nothing. There is no local
+  // copy of the word to discard or re-sync.
+  const currentResult = session.results[currentWordIndex];
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [focusedInputIndex, setFocusedInputIndex] = useState<number | null>(null);
-
-  useEffect(() => {
-    setCurrentResult(session.results[currentWordIndex]);
-  }, [currentWordIndex, session.results]);
 
   const handleProductionChange = (
     index: number,
@@ -100,7 +98,13 @@ export function ProbeAdministration({
     value: any
   ) => {
     const newProductions = [...currentResult.productions];
-    const newProduction = { ...newProductions[index], [field]: value };
+    // The first change to any scoring control scores this production.
+    // Merely viewing a word changes nothing and scores nothing.
+    const newProduction = {
+      ...newProductions[index],
+      [field]: value,
+      isScored: true,
+    };
 
     // If an error type is selected, automatically mark as incorrect.
     if (field === 'errorType' && value) {
@@ -119,11 +123,13 @@ export function ProbeAdministration({
       productions: newProductions,
     };
     delete newResult.skipped;
-    setCurrentResult(newResult);
+    updateResult(currentWordIndex, newResult);
   };
 
   const handleSaveAndNavigate = (direction: 'next' | 'prev') => {
-    // Ensure the latest state of currentResult is saved before navigating
+    // Edits are already committed on change. Navigation keeps the whole-word
+    // commit: leaving a word by Prev or Next marks its remaining productions
+    // scored, and clears the skipped flag, exactly as before.
     const newResult: ProbeWordResult = {
       ...currentResult,
       productions: currentResult.productions.map(prod => ({ ...prod, isScored: true })),
@@ -181,7 +187,6 @@ export function ProbeAdministration({
             ...currentResult,
             imageUrl: reader.result as string,
           };
-          setCurrentResult(newResult);
           updateResult(currentWordIndex, newResult);
           setIsImageModalOpen(false);
         }
