@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import type { ProbeSession, ProbeWordResult } from '@/lib/types';
+import { isProductionCorrect, isProductionCounted } from '@/lib/scoring';
 import { useMemo } from 'react';
 import { G_DEEP_PROBE_SECTIONS } from '@/lib/g-probe-constants';
 import { usePhonemeCoverage } from '@/hooks/use-phoneme-coverage';
@@ -41,10 +42,10 @@ export function GDeepProbeResults({ session }: GDeepProbeResultsProps) {
 
                 if (targetIndices.length === 0) return false;
 
-                return targetIndices.every(index => result.productions[index].isScored && result.productions[index].isCorrect);
+                return targetIndices.every(index => isProductionCorrect(result.productions[index], session));
             }).length;
 
-            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
+            const totalInSection = session.scoringBasis === 'full' ? wordsInSection.length : wordsInSection.filter(r => r.productions.some(prod => isProductionCounted(prod, session))).length;
             
             return {
                 category: section.category,
@@ -119,6 +120,8 @@ export function GDeepProbeResults({ session }: GDeepProbeResultsProps) {
                 correctWords={correctWords}
                 attemptedWords={attemptedWords}
                 scoredUnits={scoredUnits}
+                scoringBasis={session.scoringBasis}
+                countUnadministeredAsCorrect={session.countUnadministeredAsCorrect}
             />
         </div>
     );

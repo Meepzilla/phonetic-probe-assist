@@ -3,6 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ProbeSession } from '@/lib/types';
+import { isProductionCounted } from '@/lib/scoring';
 import { useMemo } from 'react';
 import { PCC } from './pcc';
 import { SharedCoverageDetails } from './shared-coverage-details';
@@ -22,7 +23,7 @@ export function PipResults({ session }: PipResultsProps) {
         
         session.results.forEach(result => {
             if (result.skipped) return;
-            if (!result.productions.some(prod => prod.isScored)) return;
+            if (!result.productions.some(prod => isProductionCounted(prod, session))) return;
             
             const phonemes = result.phonemes.map(p => p.phoneme).filter(p => PHONEME_CONTRASTS.includes(p));
             if (phonemes.length < 2) return;
@@ -113,6 +114,8 @@ export function PipResults({ session }: PipResultsProps) {
                 correctWords={correctWords}
                 attemptedWords={attemptedWords}
                 scoredUnits={scoredUnits}
+                scoringBasis={session.scoringBasis}
+                countUnadministeredAsCorrect={session.countUnadministeredAsCorrect}
             />
         </div>
     );

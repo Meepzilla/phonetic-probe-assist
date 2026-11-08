@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import type { ProbeSession, ProbeWordResult } from '@/lib/types';
+import { isProductionCorrect, isProductionCounted } from '@/lib/scoring';
 import { useMemo, useState } from 'react';
 import { SH_CH_DEEP_PROBE_SECTIONS } from '@/lib/sh-ch-probe-constants';
 import { usePhonemeCoverage } from '@/hooks/use-phoneme-coverage';
@@ -49,10 +50,10 @@ export function ShChDeepProbeResults({ session }: ShChDeepProbeResultsProps) {
                     targets.some(target => result.phonemes[index].phoneme.includes(target))
                 );
                 if (targetProductions.length === 0) return false;
-                return targetProductions.every(p => p.isScored && p.isCorrect);
+                return targetProductions.every(p => isProductionCorrect(p, session));
             }).length;
 
-            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
+            const totalInSection = session.scoringBasis === 'full' ? wordsInSection.length : wordsInSection.filter(r => r.productions.some(prod => isProductionCounted(prod, session))).length;
             
             return {
                 mainCategory: section.category as 'SH' | 'CH',
@@ -281,6 +282,8 @@ export function ShChDeepProbeResults({ session }: ShChDeepProbeResultsProps) {
                 phonemeSet={phonemeSet}
                 attemptedWords={attemptedWords}
                 scoredUnits={scoredUnits}
+                scoringBasis={session.scoringBasis}
+                countUnadministeredAsCorrect={session.countUnadministeredAsCorrect}
             />
         </div>
     );

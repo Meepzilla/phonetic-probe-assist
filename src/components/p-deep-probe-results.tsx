@@ -4,6 +4,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import type { ProbeSession } from '@/lib/types';
+import { isProductionCorrect, isProductionCounted } from '@/lib/scoring';
 import { useMemo } from 'react';
 import { P_DEEP_PROBE_SECTIONS } from '@/lib/p-probe-constants';
 import { usePhonemeCoverage } from '@/hooks/use-phoneme-coverage';
@@ -39,10 +40,10 @@ export function PDeepProbeResults({ session }: PDeepProbeResultsProps) {
                 if (targetIndices.length === 0) return false;
 
                 // Check if all productions of the target phoneme are correct
-                return targetIndices.every(index => result.productions[index].isScored && result.productions[index].isCorrect);
+                return targetIndices.every(index => isProductionCorrect(result.productions[index], session));
             }).length;
 
-            const totalInSection = wordsInSection.filter(r => r.productions.some(prod => prod.isScored)).length;
+            const totalInSection = session.scoringBasis === 'full' ? wordsInSection.length : wordsInSection.filter(r => r.productions.some(prod => isProductionCounted(prod, session))).length;
             
             return {
                 category: section.category,
@@ -112,6 +113,8 @@ export function PDeepProbeResults({ session }: PDeepProbeResultsProps) {
                 correctWords={correctWords}
                 attemptedWords={attemptedWords}
                 scoredUnits={scoredUnits}
+                scoringBasis={session.scoringBasis}
+                countUnadministeredAsCorrect={session.countUnadministeredAsCorrect}
             />
         </div>
     );

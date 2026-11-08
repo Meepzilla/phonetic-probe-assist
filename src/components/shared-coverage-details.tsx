@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { ErrorType, ProbeWordResult } from '@/lib/types';
+import type { ErrorType, ProbeWordResult, ScoringBasis } from '@/lib/types';
+import { scoringBasisLabel } from '@/lib/scoring';
 import { useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import { Check, CheckCircle } from 'lucide-react';
@@ -34,6 +35,8 @@ interface SharedCoverageDetailsProps {
     correctWords?: Record<string, Record<string, ProbeWordResult[]>>;
     attemptedWords?: number;
     scoredUnits?: number;
+    scoringBasis?: ScoringBasis;
+    countUnadministeredAsCorrect?: boolean;
 }
 
 const CoverageBadge = ({ phoneme, position, count, words }: { phoneme: string; position: 'initial' | 'medial' | 'final'; count: number; words: ProbeWordResult[] | undefined }) => {
@@ -67,7 +70,7 @@ const CoverageBadge = ({ phoneme, position, count, words }: { phoneme: string; p
     return badge;
 }
 
-export function SharedCoverageDetails({ coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits }: SharedCoverageDetailsProps) {
+export function SharedCoverageDetails({ coverage, errors, phoneticInventory, phonemeSet, correctWords, attemptedWords, scoredUnits, scoringBasis, countUnadministeredAsCorrect }: SharedCoverageDetailsProps) {
     const errorSummary = useMemo(() => {
         const summary: {[key: string]: number} = {
             substitution: 0,
@@ -92,6 +95,9 @@ export function SharedCoverageDetails({ coverage, errors, phoneticInventory, pho
             {attemptedWords !== undefined && scoredUnits !== undefined && (
                 <p className="text-sm text-muted-foreground">
                     {attemptedWords} words attempted · {scoredUnits} units scored
+                    {scoringBasis !== undefined && (
+                        <> · Scoring basis: {scoringBasisLabel(scoringBasis)} · Unadministered words count as correct: {countUnadministeredAsCorrect ? 'Yes' : 'No'}</>
+                    )}
                 </p>
             )}
              <Card>

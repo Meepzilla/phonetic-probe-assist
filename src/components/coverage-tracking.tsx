@@ -91,6 +91,8 @@ export function CoverageTracking({ session }: CoverageTrackingProps) {
                 correctWords={correctWords}
                 attemptedWords={attemptedWords}
                 scoredUnits={scoredUnits}
+                scoringBasis={session.scoringBasis}
+                countUnadministeredAsCorrect={session.countUnadministeredAsCorrect}
             />
         </div>
     );
