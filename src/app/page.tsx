@@ -23,6 +23,7 @@ import {
   saveSavedSession,
 } from '@/lib/session-storage';
 import type { SavedSessionEnvelope } from '@/lib/session-storage';
+import { ensureDefaultPictogramsSeeded } from '@/lib/pictogram-seed';
 
 export default function Home() {
   const [session, setSession] = useState<ProbeSession | null>(null);
@@ -41,6 +42,14 @@ export default function Home() {
     if (restored) {
       setSavedSession(restored);
     }
+  }, []);
+
+  // Fill the word image library with the bundled default pictograms on
+  // first launch. Fire and forget: rendering never waits on it, the
+  // Settings tab reports its progress, and a failed run simply resumes
+  // on a later launch.
+  useEffect(() => {
+    void ensureDefaultPictogramsSeeded();
   }, []);
 
   // Write-through persistence: every session, phase, or word-position change
