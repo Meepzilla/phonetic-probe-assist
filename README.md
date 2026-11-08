@@ -10,4 +10,4 @@ Copy .env.example to .env and set GEMINI_API_KEY, then run npm install and npm r
 
 ## Cloudflare hosting
 
-This is a Next.js app with server-side AI flows, so it deploys to Cloudflare Workers, not as a static site. Setup path: add the OpenNext Cloudflare adapter, build with it, and deploy with Wrangler using the included wrangler.toml. Set the key with wrangler secret put GEMINI_API_KEY. Never commit the key.
+This is a Next.js app with server-side AI flows, so it deploys to Cloudflare Workers, not as a static site. The OpenNext Cloudflare adapter is installed. Run npm run deploy to build and deploy to Cloudflare Workers, or npm run preview to test the Worker locally. Set the key once with npx wrangler secret put GEMINI_API_KEY. Never commit the key.
