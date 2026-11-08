@@ -18,6 +18,7 @@ interface PhoneticProbeClientProps {
     updatedResult: ProbeSession['results'][0]
   ) => void;
   onFinish: () => void;
+  onOpenSettings: () => void;
 }
 
 export function PhoneticProbeClient({
@@ -27,11 +28,12 @@ export function PhoneticProbeClient({
   setCurrentWordIndex,
   updateResult,
   onFinish,
+  onOpenSettings,
 }: PhoneticProbeClientProps) {
   return (
     <>
       <TabsContent value="setup">
-        <SessionSetup onSessionStart={onSessionStart} />
+        <SessionSetup onSessionStart={onSessionStart} onOpenSettings={onOpenSettings} />
       </TabsContent>
 
       <TabsContent value="word-list">

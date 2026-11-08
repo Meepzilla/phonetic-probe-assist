@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { BookMarked } from 'lucide-react';
 import { PhoneticProbeClient } from '@/components/phonetic-probe-client';
+import { AppSettings } from '@/components/app-settings';
 import type { ProbeSession } from '@/lib/types';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -175,6 +176,12 @@ export default function Home() {
             >
               5. Export
             </TabsTrigger>
+            <TabsTrigger
+              value="settings"
+              className="py-4 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:shadow-none data-[state=active]:bg-transparent"
+            >
+              Settings
+            </TabsTrigger>
           </TabsList>
         </div>
         <main className="container mx-auto px-6 py-8">
@@ -189,7 +196,9 @@ export default function Home() {
               session.
             </div>
           )}
-          {savedSession && !session ? (
+          {activeTab === 'settings' ? (
+            <AppSettings />
+          ) : savedSession && !session ? (
             <Card className="w-full max-w-2xl mx-auto">
               <CardHeader>
                 <CardTitle>Saved session found</CardTitle>
@@ -224,6 +233,7 @@ export default function Home() {
               setCurrentWordIndex={handleSetCurrentWordIndex}
               updateResult={handleUpdateResult}
               onFinish={handleFinishProbe}
+              onOpenSettings={() => handleSetActiveTab('settings')}
             />
           )}
         </main>
