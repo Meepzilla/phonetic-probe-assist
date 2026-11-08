@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import {
   Card,
@@ -61,8 +61,16 @@ import {
   ChevronRight,
   CheckCircle,
   SkipForward,
-  Pencil
+  Pencil,
+  Trash2
 } from 'lucide-react';
+import {
+  deleteWordImage,
+  getWordImagesForWords,
+  putWordImage,
+  wordImageKey,
+  wordImageScopeForProbeType,
+} from '@/lib/word-image-db';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -91,6 +99,49 @@ export function ProbeAdministration({
   const currentResult = session.results[currentWordIndex];
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [focusedInputIndex, setFocusedInputIndex] = useState<number | null>(null);
+
+  // Word image library. Images saved for a word in any session are loaded
+  // once per session (a fresh start and a resume both arrive here with a
+  // session) and resolved by word key at render time. They are never copied
+  // into the session results, so the localStorage session save in
+  // session-storage.ts carries no library payload.
+  const imageScope = wordImageScopeForProbeType(session.probeType);
+  const [libraryImages, setLibraryImages] = useState<Record<string, string>>({});
+  const [libraryUnavailable, setLibraryUnavailable] = useState(false);
+  const [imageActionError, setImageActionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const keys = Array.from(
+      new Set(session.results.map((result) => wordImageKey(imageScope, result.word)))
+    );
+    getWordImagesForWords(keys)
+      .then((images) => {
+        if (!cancelled) {
+          setLibraryImages(images);
+          setLibraryUnavailable(false);
+        }
+      })
+      .catch(() => {
+        // The library is unavailable on this device. Administration falls
+        // back to one-off session uploads, as before the library existed.
+        if (!cancelled) {
+          setLibraryImages({});
+          setLibraryUnavailable(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Runs once per session: the word set and scope are fixed for a session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.sessionId]);
+
+  const currentWordKey = wordImageKey(imageScope, currentResult.word);
+  const libraryImageForCurrentWord = libraryImages[currentWordKey];
+  // Display rule: an image set on the session result wins, then the saved
+  // library image for the word, then no image.
+  const displayedImageUrl = currentResult.imageUrl ?? libraryImageForCurrentWord;
 
   const handleProductionChange = (
     index: number,
@@ -181,18 +232,73 @@ export function ProbeAdministration({
     const file = event.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onload = () => {
+      reader.onload = async () => {
         if (reader.result) {
+          const imageDataUrl = reader.result as string;
+          // Applies to the current word immediately, with the same effect
+          // the one-off upload always had: imageUrl on the result, and no
+          // change to scoring or the skipped flag.
           const newResult = {
             ...currentResult,
-            imageUrl: reader.result as string,
+            imageUrl: imageDataUrl,
           };
           updateResult(currentWordIndex, newResult);
-          setIsImageModalOpen(false);
+          if (libraryUnavailable) {
+            setIsImageModalOpen(false);
+            return;
+          }
+          try {
+            // Saved to the library under this word, so every future session
+            // that probes the word shows it without another upload.
+            const record = await putWordImage({
+              scope: imageScope,
+              word: currentResult.word,
+              imageDataUrl,
+              mimeType: file.type || 'image/*',
+            });
+            setLibraryImages((prev) => ({ ...prev, [record.key]: imageDataUrl }));
+            setImageActionError(null);
+            setIsImageModalOpen(false);
+          } catch {
+            setImageActionError(
+              'The image was added to this session, but it could not be saved to the word image library on this device.'
+            );
+          }
         }
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleRemoveLibraryImage = async () => {
+    try {
+      await deleteWordImage(currentWordKey);
+    } catch {
+      setImageActionError('The saved image could not be removed from the word image library.');
+      return;
+    }
+    setLibraryImages((prev) => {
+      const next = { ...prev };
+      delete next[currentWordKey];
+      return next;
+    });
+    // When the session image is the library image just removed, clear it
+    // too so the display clears. A different session-only image stays.
+    if (currentResult.imageUrl && currentResult.imageUrl === libraryImageForCurrentWord) {
+      const newResult = { ...currentResult };
+      delete newResult.imageUrl;
+      updateResult(currentWordIndex, newResult);
+    }
+    setImageActionError(null);
+    setIsImageModalOpen(false);
+  };
+
+  const handleRemoveSessionImage = () => {
+    const newResult = { ...currentResult };
+    delete newResult.imageUrl;
+    updateResult(currentWordIndex, newResult);
+    setImageActionError(null);
+    setIsImageModalOpen(false);
   };
 
     const handleIpaButtonClick = (char: string) => {
@@ -224,16 +330,16 @@ export function ProbeAdministration({
         <CardContent className="grid md:grid-cols-2 gap-8 items-start">
           <div className="flex flex-col items-center justify-start space-y-4">
             <div className="relative">
-              {currentResult.imageUrl && (
+              {displayedImageUrl && (
                 <Image
-                  src={currentResult.imageUrl}
+                  src={displayedImageUrl}
                   alt={currentResult.word}
                   width={400}
                   height={300}
                   className="rounded-lg shadow-md object-cover"
                 />
               )}
-               <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
+               <Dialog open={isImageModalOpen} onOpenChange={(open) => { setIsImageModalOpen(open); if (open) setImageActionError(null); }}>
                 <DialogTrigger asChild>
                     <Button variant="outline" size="icon" className="absolute top-2 right-2 bg-background/70 hover:bg-background">
                         <Pencil className="h-4 w-4" />
@@ -244,18 +350,57 @@ export function ProbeAdministration({
                     <DialogHeader>
                         <DialogTitle>Update Image for "{currentResult.word}"</DialogTitle>
                         <DialogDescription>
-                            Upload your own image.
+                            {libraryUnavailable
+                                ? 'The word image library is unavailable on this device, so an uploaded image applies to this session only.'
+                                : 'An uploaded image is saved to the word image library and appears automatically in every session that probes this word.'}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-6 py-4">
+                         <p className="text-sm text-muted-foreground">
+                            {!displayedImageUrl && 'No image for this word yet.'}
+                            {displayedImageUrl && currentResult.imageUrl && currentResult.imageUrl === libraryImageForCurrentWord && 'This word is showing its saved library image.'}
+                            {displayedImageUrl && currentResult.imageUrl && currentResult.imageUrl !== libraryImageForCurrentWord && 'This word is showing an image set for this session only.'}
+                            {displayedImageUrl && !currentResult.imageUrl && libraryImageForCurrentWord && 'This word is showing its saved library image.'}
+                         </p>
                          <div className="space-y-2">
                             <Label htmlFor="image-upload">Upload From Device</Label>
                             <Input id="image-upload" type="file" accept="image/*" onChange={handleImageUpload} />
                         </div>
+                        {imageActionError && (
+                            <p className="text-sm text-destructive">{imageActionError}</p>
+                        )}
+                        {libraryImageForCurrentWord && (
+                            <div className="space-y-2 border-t pt-4">
+                                <Button variant="destructive" onClick={handleRemoveLibraryImage} className="w-full">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Remove saved image from library
+                                </Button>
+                                <p className="text-sm text-muted-foreground">
+                                    Deletes the saved image for "{currentResult.word}" so it no longer appears in any session.
+                                </p>
+                            </div>
+                        )}
+                        {currentResult.imageUrl && currentResult.imageUrl !== libraryImageForCurrentWord && (
+                            <div className="space-y-2 border-t pt-4">
+                                <Button variant="outline" onClick={handleRemoveSessionImage} className="w-full">
+                                    <Trash2 className="mr-2 h-4 w-4" /> Remove image from this session only
+                                </Button>
+                                <p className="text-sm text-muted-foreground">
+                                    Clears the image set on this word in this session. The saved library image, if any, is kept.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </DialogContent>
             </Dialog>
             </div>
+            {!currentResult.imageUrl && libraryImageForCurrentWord && (
+              <p className="text-xs text-muted-foreground">Saved library image for this word</p>
+            )}
+            {libraryUnavailable && (
+              <p className="text-xs text-muted-foreground">
+                Word image library is unavailable on this device. Uploaded images apply to this session only.
+              </p>
+            )}
             <div className="text-center">
               <h2 className="text-5xl font-bold font-headline">
                 {currentResult.word.split('').map((char, index) => (
