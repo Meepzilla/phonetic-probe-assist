@@ -191,6 +191,14 @@ export interface PhonologicalProcessAgeReference {
   status: 'typical' | 'atypical' | 'no-established-norm';
   /** Elimination age display value, e.g. '3;6' or the range '5;0 to 7;0'. Typical entries only. */
   eliminatedBy?: string;
+  /**
+   * Machine-readable elimination point in completed months, kept
+   * alongside the eliminatedBy display string: the point value, or
+   * the low end when the entry is a range. Typical entries only.
+   */
+  eliminationMonths?: number;
+  /** Upper end of a ranged elimination point, in completed months. Ranged typical entries only. */
+  eliminationMonthsUpper?: number;
   /** Short conditional note, present where the norm varies by context. */
   qualifier?: string;
   /** Named published source(s) behind the value or status. */
@@ -201,6 +209,7 @@ export const PHONOLOGICAL_PROCESS_AGE_REFERENCE: Record<string, PhonologicalProc
   'final-consonant-deletion': {
     status: 'typical',
     eliminatedBy: '3;3',
+    eliminationMonths: 39,
     source: 'Bowen (2011), Table 3, after Grunwell (1987); ASHA and Peña-Brooks & Hegde (2015) round to 3 years',
   },
   'initial-consonant-deletion': {
@@ -210,18 +219,21 @@ export const PHONOLOGICAL_PROCESS_AGE_REFERENCE: Record<string, PhonologicalProc
   'cluster-reduction': {
     status: 'typical',
     eliminatedBy: '4;0',
+    eliminationMonths: 48,
     qualifier: 'Clusters with /s/ by about 5;0.',
     source: 'Bowen (2011), after Grunwell (1987); ASHA, Selected Phonological Patterns',
   },
   'stopping': {
     status: 'typical',
     eliminatedBy: '5;0',
+    eliminationMonths: 60,
     qualifier: 'By sound: /f, s/ by 3;0; /v, z/ by 3;6; /ʃ, tʃ, dʒ/ by 4;6; /θ, ð/ by 5;0.',
     source: 'Bowen (2011), after Grunwell (1987); ASHA, Selected Phonological Patterns',
   },
   'fronting': {
     status: 'typical',
     eliminatedBy: '3;6',
+    eliminationMonths: 42,
     qualifier: 'Velar fronting; ASHA rounds to 4 years.',
     source: 'Bowen (2011), after Grunwell (1987); ASHA, Selected Phonological Patterns',
   },
@@ -232,44 +244,55 @@ export const PHONOLOGICAL_PROCESS_AGE_REFERENCE: Record<string, PhonologicalProc
   'gliding': {
     status: 'typical',
     eliminatedBy: '5;0 to 7;0',
+    eliminationMonths: 60,
+    eliminationMonthsUpper: 84,
     qualifier: 'Bowen gives 5;0 and Peña-Brooks & Hegde 6;0; ASHA gives 6 to 7 years.',
     source: 'Bowen (2011); Peña-Brooks & Hegde (2015); ASHA, Selected Phonological Patterns',
   },
   'vocalization': {
     status: 'typical',
     eliminatedBy: '5;0 to 6;0',
+    eliminationMonths: 60,
+    eliminationMonthsUpper: 72,
     qualifier: 'Most charts give 6;0, including the Lowe (2000) ALPHA suppression chart.',
     source: 'Lowe (2000), ALPHA Revised Test of Phonology, suppression ages; clinical suppression charts after Bleile (1995)',
   },
   'final-devoicing': {
     status: 'typical',
     eliminatedBy: '3;0',
+    eliminationMonths: 36,
     source: 'Bowen (2011), Table 3, after Grunwell (1987)',
   },
   'prevocalic-voicing': {
     status: 'typical',
     eliminatedBy: '3;0',
+    eliminationMonths: 36,
     source: 'Bowen (2011), Table 3 (context-sensitive voicing), after Grunwell (1987)',
   },
   'denasalization': {
     status: 'typical',
     eliminatedBy: '2;6',
+    eliminationMonths: 30,
     source: 'Bleile (1995); Linguisystems (2008), Phonological Pattern Suppression by Age',
   },
   'deaffrication': {
     status: 'typical',
     eliminatedBy: '4;0',
+    eliminationMonths: 48,
     source: 'ASHA, Selected Phonological Patterns; Peña-Brooks & Hegde (2015)',
   },
   'assimilation': {
     status: 'typical',
     eliminatedBy: '3;0 to 3;9',
+    eliminationMonths: 36,
+    eliminationMonthsUpper: 45,
     qualifier: 'Consonant harmony: ASHA and Peña-Brooks & Hegde give 3 years; Bowen gives 3;9.',
     source: 'ASHA, Selected Phonological Patterns; Peña-Brooks & Hegde (2015); Bowen (2011), after Grunwell (1987)',
   },
   'addition': {
     status: 'typical',
     eliminatedBy: '8;0',
+    eliminationMonths: 96,
     source: 'Peña-Brooks & Hegde (2015); corroborated by Bleile (1995) and Linguisystems (2008) charts',
   },
 };
@@ -284,6 +307,27 @@ export function formatAgeReference(reference: PhonologicalProcessAgeReference): 
   }
   const base = `Typically eliminated by about ${reference.eliminatedBy}.`;
   return reference.qualifier ? `${base} ${reference.qualifier}` : base;
+}
+
+/**
+ * Whether a student of the given age (completed months) is past a
+ * process's typical elimination point. Ranged entries compare against
+ * the upper end of the range, so a process counts as past only once
+ * the student is beyond the whole typical window. Stopping compares
+ * at its overall 5;0 point (60 months); its per-sound breakdown in
+ * the qualifier stays display-only. Atypical and
+ * no-established-norm entries are never past, since they carry no
+ * elimination point.
+ */
+export function isPastTypicalElimination(
+  reference: PhonologicalProcessAgeReference | undefined,
+  studentAgeMonths: number
+): boolean {
+  if (!reference || reference.status !== 'typical' || reference.eliminationMonths === undefined) {
+    return false;
+  }
+  const threshold = reference.eliminationMonthsUpper ?? reference.eliminationMonths;
+  return studentAgeMonths > threshold;
 }
 
 const MAX_EXAMPLES = 5;

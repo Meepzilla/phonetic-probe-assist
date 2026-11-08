@@ -28,6 +28,7 @@ import { B_DEEP_PROBE_SECTIONS, B_WORD_BANK } from '@/lib/b-probe-constants';
 import { P_DEEP_PROBE_SECTIONS, P_WORD_BANK } from '@/lib/p-probe-constants';
 import { PIP_SECTIONS, PIP_WORD_BANK } from '@/lib/pip-probe-constants';
 import { useToast } from '@/hooks/use-toast';
+import { completedMonthsFromBirthdate, formatAgeMonths } from '@/lib/student-age';
 import type { ProbeSession, ProbeWordResult, PhonemeUnit, ProbeType, ScoringBasis } from '@/lib/types';
 import { Info } from 'lucide-react';
 
@@ -83,7 +84,58 @@ export function SessionSetup({ onSessionStart, onOpenSettings }: SessionSetupPro
     const [probeType, setProbeType] = useState<ProbeType>('general');
     const [countUnadministeredAsCorrect, setCountUnadministeredAsCorrect] = useState(false);
     const [scoringBasis, setScoringBasis] = useState<ScoringBasis>('attempted');
+    const [ageEntryMode, setAgeEntryMode] = useState<'age' | 'birthdate'>('age');
+    const [ageYears, setAgeYears] = useState('');
+    const [ageMonthsInput, setAgeMonthsInput] = useState('');
+    const [birthdateInput, setBirthdateInput] = useState('');
     const { toast } = useToast();
+
+    // Student age is optional and is entered either as years;months or
+    // as a birthdate. Only the active mode's value is carried into the
+    // session, so the stored state is never ambiguous. Invalid input
+    // shows a message here and is not written to the session.
+    const now = new Date();
+    const todayString = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    let ageError: string | null = null;
+    let enteredAgeMonths: number | null = null;
+    let enteredBirthdate: string | null = null;
+    if (ageEntryMode === 'age') {
+        if (ageYears.trim() !== '' || ageMonthsInput.trim() !== '') {
+            const years = Number(ageYears);
+            const months = Number(ageMonthsInput);
+            if (
+                ageYears.trim() === '' ||
+                ageMonthsInput.trim() === '' ||
+                !Number.isInteger(years) ||
+                !Number.isInteger(months)
+            ) {
+                ageError = 'Enter the age as whole years and months.';
+            } else if (years < 0 || years > 21 || months < 0 || months > 11) {
+                ageError = 'Years must be 0 to 21 and months 0 to 11.';
+            } else {
+                enteredAgeMonths = years * 12 + months;
+            }
+        }
+    } else if (birthdateInput !== '') {
+        if (birthdateInput > todayString) {
+            ageError = 'Birthdate cannot be after today.';
+        } else {
+            const months = completedMonthsFromBirthdate(birthdateInput, todayString);
+            if (months === null) {
+                ageError = 'Enter a valid birthdate.';
+            } else if (months > 263) {
+                ageError = 'Birthdate gives an age over 21 years.';
+            } else {
+                enteredBirthdate = birthdateInput;
+            }
+        }
+    }
+    const enteredAgeResolvedMonths =
+        ageEntryMode === 'age'
+            ? enteredAgeMonths
+            : enteredBirthdate !== null
+              ? completedMonthsFromBirthdate(enteredBirthdate, todayString)
+              : null;
     
     const handleStartSession = () => {
         if (!clientId.trim()) {
@@ -161,6 +213,8 @@ export function SessionSetup({ onSessionStart, onOpenSettings }: SessionSetupPro
             sessionId: `sess_${Date.now()}`,
             clientId,
             date: new Date().toISOString(),
+            ...(enteredBirthdate !== null ? { studentBirthdate: enteredBirthdate } : {}),
+            ...(enteredAgeMonths !== null ? { studentAgeMonths: enteredAgeMonths } : {}),
             wordList: Array.from(new Set(sessionWords)), // Ensure unique words
             results: sessionResults.filter((v, i, a) => a.findIndex(t => (t.word === v.word)) === i), // Ensure unique results
             probeType: probeType,
@@ -185,6 +239,77 @@ export function SessionSetup({ onSessionStart, onOpenSettings }: SessionSetupPro
                         value={clientId}
                         onChange={(e) => setClientId(e.target.value)}
                     />
+                </div>
+
+                <div className="space-y-2">
+                    <Label>Student Age (optional)</Label>
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant={ageEntryMode === 'age' ? 'default' : 'outline'}
+                            className="min-h-[40px]"
+                            aria-pressed={ageEntryMode === 'age'}
+                            onClick={() => setAgeEntryMode('age')}
+                        >
+                            Age
+                        </Button>
+                        <Button
+                            type="button"
+                            variant={ageEntryMode === 'birthdate' ? 'default' : 'outline'}
+                            className="min-h-[40px]"
+                            aria-pressed={ageEntryMode === 'birthdate'}
+                            onClick={() => setAgeEntryMode('birthdate')}
+                        >
+                            Birthdate
+                        </Button>
+                    </div>
+                    {ageEntryMode === 'age' ? (
+                        <div className="flex gap-3">
+                            <div className="space-y-1">
+                                <Label htmlFor="student-age-years">Years</Label>
+                                <Input
+                                    id="student-age-years"
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={0}
+                                    max={21}
+                                    placeholder="e.g., 4"
+                                    value={ageYears}
+                                    onChange={(e) => setAgeYears(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="student-age-months">Months</Label>
+                                <Input
+                                    id="student-age-months"
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={0}
+                                    max={11}
+                                    placeholder="e.g., 7"
+                                    value={ageMonthsInput}
+                                    onChange={(e) => setAgeMonthsInput(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-1">
+                            <Label htmlFor="student-birthdate">Birthdate</Label>
+                            <Input
+                                id="student-birthdate"
+                                type="date"
+                                value={birthdateInput}
+                                onChange={(e) => setBirthdateInput(e.target.value)}
+                            />
+                        </div>
+                    )}
+                    {ageError ? (
+                        <p className="text-sm text-destructive">{ageError}</p>
+                    ) : enteredAgeResolvedMonths !== null ? (
+                        <p className="text-sm text-muted-foreground">
+                            Student age: {formatAgeMonths(enteredAgeResolvedMonths)}
+                        </p>
+                    ) : null}
                 </div>
 
                  <div className="space-y-2">
